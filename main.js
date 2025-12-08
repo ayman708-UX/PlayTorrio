@@ -175,7 +175,7 @@ function setupDiscordRPC() {
                     largeImageKey: 'icon', // uploaded image name on Discord dev portal
                     largeImageText: 'PlayTorrio App',
                     buttons: [
-                        { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                        { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                     ]
                 });
             } catch (e) {
@@ -401,7 +401,7 @@ function setupAutoUpdater() {
         autoUpdater.on('update-downloaded', async (info) => {
             if (process.platform === 'darwin') {
                 // Should not happen because autoDownload=false on mac, but guard just in case
-                const releasesUrl = 'https://github.com/ayman707-ux/PlayTorrio/releases/latest';
+                const releasesUrl = 'https://github.com/ayman708-UX/PlayTorrio/releases/latest';
                 console.log('[Updater] macOS: manual update required. Skipping auto-install.');
                 try {
                     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -977,7 +977,7 @@ async function openInMPV(win, streamUrl, infoHash, startSeconds) {
                         largeImageKey: 'icon',
                         largeImageText: 'PlayTorrio App',
                         buttons: [
-                            { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                            { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                         ]
                     });
                 }
@@ -1057,7 +1057,7 @@ function openInIINA(win, streamUrl, infoHash, startSeconds) {
                         largeImageKey: 'icon',
                         largeImageText: 'PlayTorrio App',
                         buttons: [
-                            { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                            { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                         ]
                     });
                 }
@@ -1118,7 +1118,7 @@ function openInVLC(win, streamUrl, infoHash, startSeconds) {
                         largeImageKey: 'icon',
                         largeImageText: 'PlayTorrio App',
                         buttons: [
-                            { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                            { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                         ]
                     });
                 }
@@ -2373,7 +2373,7 @@ if (!gotLock) {
                             largeImageKey: 'icon',
                             largeImageText: 'PlayTorrio App',
                             buttons: [
-                                { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                                { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                             ]
                         });
                     }
@@ -2447,7 +2447,7 @@ if (!gotLock) {
                             largeImageKey: 'icon',
                             largeImageText: 'PlayTorrio App',
                             buttons: [
-                                { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                                { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                             ]
                         });
                     }
@@ -2512,7 +2512,7 @@ if (!gotLock) {
                             largeImageKey: 'icon',
                             largeImageText: 'PlayTorrio App',
                             buttons: [
-                                { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                                { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                             ]
                         });
                     }
@@ -3042,7 +3042,7 @@ if (!gotLock) {
                 activity.buttons = presenceData.buttons;
             } else {
                 activity.buttons = [
-                    { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                    { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                 ];
             }
 
@@ -3067,7 +3067,7 @@ if (!gotLock) {
                 largeImageKey: 'icon',
                 largeImageText: 'PlayTorrio App',
                 buttons: [
-                    { label: 'Download App', url: 'https://github.com/ayman707-ux/PlayTorrio' }
+                    { label: 'Download App', url: 'https://github.com/ayman708-UX/PlayTorrio' }
                 ]
             });
             return { success: true };
