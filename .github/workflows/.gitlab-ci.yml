@@ -1,0 +1,108 @@
+stages:
+  - build
+  - release
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v.*/  # Run only when tag starts with v
+
+variables:
+  NODE_VERSION: "20"
+  GIT_STRATEGY: fetch
+  ELECTRON_CACHE: "$CI_PROJECT_DIR/.cache/electron"
+  ELECTRON_BUILDER_CACHE: "$CI_PROJECT_DIR/.cache/electron-builder"
+
+# ---------------- WINDOWS ----------------
+build_windows:
+  stage: build
+  tags:
+    - saas-windows-medium-amd64
+  script:
+    - nvm install $env:NODE_VERSION
+    - npm install
+    - Write-Host "Checking puppeteer-core installation..."
+    - npm list puppeteer-core
+    - if (!(Test-Path "node_modules/puppeteer-core")) { exit 1 }
+    - if (Test-Path "mpv.rar") { 7z x mpv.rar -y }
+    - if (Test-Path "mpv.js-master-updated.rar") { 7z x mpv.js-master-updated.rar -y }
+    - if (Test-Path "mpv.zip") { Expand-Archive -Path mpv.zip -DestinationPath mpv-temp -Force }
+    - if (!(Test-Path "build")) { mkdir build }
+    - if (Test-Path icon.ico) { Copy-Item icon.ico build/icon.ico -Force }
+    - npm run build -- --win
+  artifacts:
+    paths:
+      - dist/
+
+# ---------------- LINUX ----------------
+build_linux:
+  stage: build
+  image: node:$NODE_VERSION
+  tags:
+    - saas-linux-x86_64-medium
+  script:
+    - npm install
+    - npm list puppeteer-core || true
+    - if [ ! -d "node_modules/puppeteer-core" ]; then exit 1; fi
+    - mkdir -p build
+    - [ -f icon.png ] && cp icon.png build/icon.png || true
+    - npm run build -- --linux
+    - chmod +x dist/*.AppImage || true
+  artifacts:
+    paths:
+      - dist/
+
+# ---------------- MACOS (x64 & arm64) ----------------
+.build_macos_template:
+  stage: build
+  tags:
+    - saas-macos-medium-m1
+  script:
+    - npm install --verbose || npm install --verbose || npm install --verbose
+    - npm list puppeteer-core || true
+    - curl -fL https://laboratory.stolendata.net/~djinn/mpv_osx/mpv-latest.tar.gz -o mpv.tar.gz || true
+    - mkdir -p mpv
+    - [ -f mpv.tar.gz ] && tar -xzf mpv.tar.gz -C mpv || true
+    - xattr -cr dist/**/*.app || true
+  artifacts:
+    paths:
+      - dist/
+
+build_macos_x64:
+  extends: .build_macos_template
+  script:
+    - npm install --verbose
+    - npm run build -- --mac --x64
+    - xattr -cr dist/*x64*/PlayTorrio.app || true
+
+build_macos_arm64:
+  extends: .build_macos_template
+  script:
+    - npm install --verbose
+    - npm run build -- --mac --arm64
+    - xattr -cr dist/*arm64*/PlayTorrio.app || true
+
+# ---------------- FINAL RELEASE STEP ----------------
+create_gitlab_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - build_windows
+    - build_linux
+    - build_macos_x64
+    - build_macos_arm64
+  script:
+    - echo "Creating GitLab Release for $CI_COMMIT_TAG"
+  release:
+    tag_name: "$CI_COMMIT_TAG"
+    name: "Release $CI_COMMIT_TAG"
+    description: "Automated multi-platform build for $CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "Windows Installer"
+          url: "$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/dist/*.exe"
+        - name: "Linux AppImage"
+          url: "$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/dist/*.AppImage"
+        - name: "macOS Intel DMG"
+          url: "$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/dist/*x64*.dmg"
+        - name: "macOS ARM64 DMG"
+          url: "$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/dist/*arm64*.dmg"
