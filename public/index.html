@@ -16376,7 +16376,7 @@ Your browser does not support the video tag.
                 
                 // Fetch matches for the selected sport
                 console.log(`[LiveTV] Fetching matches for category: ${category}`);
-                const response = await fetch(`https://watchfooty.st/api/v1/matches/${category}`);
+                const response = await fetch(`https://api.watchfooty.st/api/v1/matches/${category}`);
                 if (!response.ok) {
                     throw new Error(`API returned ${response.status}: ${response.statusText}`);
                 }
@@ -16460,7 +16460,7 @@ Your browser does not support the video tag.
                     card.className = 'livetv-match-card';
                     
                     // Use watchfooty poster or fallback
-                    const posterUrl = match.poster ? `https://watchfooty.st${match.poster}` : '';
+                    const posterUrl = match.poster ? `https://api.watchfooty.st${match.poster}` : '';
                     const posterHTML = posterUrl 
                         ? `<img loading="lazy" src="${posterUrl}" alt="${match.title}" class="livetv-poster" onerror="this.parentElement.querySelector('.livetv-poster-placeholder').style.display='flex'; this.style.display='none';">
                            <div class="livetv-poster-placeholder" style="display:none;"><i class="fas fa-play-circle"></i></div>`
