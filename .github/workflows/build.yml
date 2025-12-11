@@ -22,11 +22,6 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install
-      - name: Verify puppeteer-core
-        run: |
-          Write-Host "Checking puppeteer-core installation..."
-          npm list puppeteer-core
-          if (Test-Path "node_modules/puppeteer-core") { Write-Host "✓ puppeteer-core found" } else { Write-Host "✗ puppeteer-core NOT FOUND"; exit 1 }
       - name: Setup Windows Players
         run: |
           if (Test-Path "mpv.rar") { 7z x mpv.rar -y }
@@ -54,11 +49,6 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install
-      - name: Verify puppeteer-core
-        run: |
-          echo "Checking puppeteer-core installation..."
-          npm list puppeteer-core || true
-          if [ -d "node_modules/puppeteer-core" ]; then echo "✓ puppeteer-core found"; else echo "✗ puppeteer-core NOT FOUND"; exit 1; fi
       - name: Prepare resources
         run: |
           mkdir -p mpv VLC build
@@ -86,11 +76,6 @@ jobs:
       - name: Install dependencies
         timeout-minutes: 45
         run: npm install --verbose || npm install --verbose || npm install --verbose
-      - name: Verify puppeteer-core
-        run: |
-          echo "Checking puppeteer-core installation..."
-          npm list puppeteer-core || true
-          if [ -d "node_modules/puppeteer-core" ]; then echo "✓ puppeteer-core found"; else echo "✗ puppeteer-core NOT FOUND"; exit 1; fi
       - name: Download MPV (x64)
         run: |
           curl -fL https://laboratory.stolendata.net/~djinn/mpv_osx/mpv-latest.tar.gz -o mpv.tar.gz || true
@@ -117,11 +102,6 @@ jobs:
       - name: Install dependencies
         timeout-minutes: 45
         run: npm install --verbose || npm install --verbose || npm install --verbose
-      - name: Verify puppeteer-core
-        run: |
-          echo "Checking puppeteer-core installation..."
-          npm list puppeteer-core || true
-          if [ -d "node_modules/puppeteer-core" ]; then echo "✓ puppeteer-core found"; else echo "✗ puppeteer-core NOT FOUND"; exit 1; fi
       - name: Download MPV (arm64)
         run: |
           curl -fL https://laboratory.stolendata.net/~djinn/mpv_osx/mpv-latest.tar.gz -o mpv.tar.gz || true
@@ -159,4 +139,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
