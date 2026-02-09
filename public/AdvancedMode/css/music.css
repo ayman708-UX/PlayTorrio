@@ -1,0 +1,160 @@
+/* Music Section Styles */
+
+/* Prevent global font override from turning UI icons into emojis */
+.titlebar-icon,
+.brand-icon,
+.navbar-brand {
+    font-family: "Segoe UI", "Roboto", "Helvetica", "Arial", sans-serif !important;
+    font-weight: normal !important;
+}
+
+/* Root Variables for Music Theme */
+:root {
+    --glass-bg: rgba(20, 20, 25, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-highlight: rgba(255, 255, 255, 0.15);
+    --primary-gradient: linear-gradient(135deg, #FF0080 0%, #7928CA 100%);
+    --secondary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --card-bg: rgba(30, 30, 35, 0.6);
+    --card-hover-bg: rgba(40, 40, 45, 0.8);
+}
+
+#music-section {
+    font-family: 'Poppins', sans-serif;
+    color: white;
+    background: radial-gradient(circle at top left, rgba(121, 40, 202, 0.15), transparent 40%),
+                radial-gradient(circle at bottom right, rgba(255, 0, 128, 0.1), transparent 40%);
+    min-height: 100vh;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    background: var(--card-hover-bg);
+    transform: translateY(-4px);
+    border-color: var(--glass-highlight);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* Custom Scrollbar for music lists */
+.music-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.music-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+.music-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+.music-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Typography Overrides */
+.text-gradient {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Input Styling */
+.music-input {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+}
+.music-input:focus {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(121, 40, 202, 0.2);
+}
+
+/* Button Styling */
+.music-btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    box-shadow: 0 4px 12px rgba(255, 0, 128, 0.3);
+    transition: all 0.3s ease;
+}
+.music-btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(255, 0, 128, 0.5);
+    transform: translateY(-1px);
+}
+
+.music-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+.music-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Player Modal Specifics */
+#music-player-modal {
+    background: rgba(10, 10, 15, 0.85) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    z-index: 9999 !important;
+}
+
+.player-disk-spin {
+    animation: spin 20s linear infinite;
+}
+.player-disk-paused {
+    animation-play-state: paused;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Volume and Progress Sliders */
+.slider-container {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+.slider-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: 10px;
+    transition: width 0.1s linear;
+}
+
+/* Grid Layouts */
+.music-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Animations */
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.animate-in {
+    animation: fadeInScale 0.4s ease-out forwards;
+}

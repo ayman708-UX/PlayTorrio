@@ -1,0 +1,162 @@
+/* Continue Watching Section */
+#continue-watching-section {
+    margin: 40px 0 20px 0;
+    padding: 0 40px;
+}
+
+#continue-watching-section h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+#continue-watching-grid {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 20px;
+    scroll-behavior: smooth;
+}
+
+#continue-watching-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+#continue-watching-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+#continue-watching-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+#continue-watching-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.continue-watching-card {
+    flex: 0 0 200px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.continue-watching-card:hover {
+    transform: scale(1.05);
+}
+
+.continue-card-poster {
+    position: relative;
+    width: 200px;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.continue-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.continue-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.8);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    z-index: 2;
+}
+
+.continue-remove-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.continue-watching-card:hover .continue-remove-btn {
+    opacity: 1;
+}
+
+.continue-remove-btn:hover {
+    background: rgba(220, 38, 38, 0.9);
+}
+
+.continue-play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.continue-watching-card:hover .continue-play-overlay {
+    opacity: 1;
+}
+
+.continue-play-overlay svg {
+    width: 60px;
+    height: 60px;
+    color: #fff;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.continue-card-info {
+    padding: 12px 0;
+}
+
+.continue-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.continue-episode-info {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 8px;
+}
+
+.continue-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.continue-progress-fill {
+    height: 100%;
+    background: #8b5cf6;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.continue-time {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTorrio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="custom-titlebar" id="customTitlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon">▶</div>
+            <div class="titlebar-title">PlayTorrio - Settings</div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button minimize" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 12 12"><rect x="0" y="5" width="12" height="1"/></svg>
+            </button>
+            <button class="titlebar-button maximize" id="maximizeBtn" title="Maximize">
+                <svg viewBox="0 0 12 12">
+                    <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                    <line x1="2.5" y1="2.5" x2="11.5" y2="2.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="11.5" x2="2.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+            </button>
+            <button class="titlebar-button close" id="closeBtn" title="Close">
+                <svg viewBox="0 0 12 12"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Ambient Background -->
+    <div class="ambient-background">
+        <div class="ambient-orb orb-a"></div>
+        <div class="ambient-orb orb-b"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="settings-header">
+        <button class="back-button" id="back-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Back
+        </button>
+        <h1 class="settings-title">Settings</h1>
+    </header>
+
+    <!-- Settings Container -->
+    <div class="settings-container">
+        <!-- Streaming Mode -->
+        <section class="settings-section">
+            <h2 class="section-title">Streaming Mode</h2>
+            <p class="section-description">Enable to scrape and stream torrents directly. Disable to use the built-in player.</p>
+            
+            <div class="toggle-group">
+                <label class="toggle-label">
+                    <input type="checkbox" id="streaming-mode-toggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Enable Streaming Mode</span>
+                </label>
+            </div>
+            <p class="help-text streaming-mode-help">When enabled, clicking play will scrape torrent sources and stream them. When disabled, it will open the built-in player.</p>
+        </section>
+
+        <!-- Jackett Settings -->
+        <section class="settings-section">
+            <h2 class="section-title">Jackett Settings</h2>
+            <p class="section-description">Configure Jackett for torrent indexing</p>
+            
+            <div class="input-group">
+                <label for="jackett-api-input">API Key</label>
+                <input type="password" id="jackett-api-input" placeholder="Enter your Jackett API key">
+            </div>
+            
+            <div class="input-group">
+                <label for="jackett-url-input">Base URL</label>
+                <input type="text" id="jackett-url-input" placeholder="http://127.0.0.1:9117/api/v2.0/indexers/all/results/torznab">
+            </div>
+        </section>
+
+        <!-- Prowlarr Settings -->
+        <section class="settings-section">
+            <h2 class="section-title">Prowlarr Settings</h2>
+            <p class="section-description">Configure Prowlarr for torrent indexing</p>
+            
+            <div class="input-group">
+                <label for="prowlarr-api-input">API Key</label>
+                <input type="password" id="prowlarr-api-input" placeholder="Enter your Prowlarr API key">
+            </div>
+            
+            <div class="input-group">
+                <label for="prowlarr-url-input">Base URL</label>
+                <input type="text" id="prowlarr-url-input" placeholder="http://127.0.0.1:9696">
+            </div>
+        </section>
+
+        <!-- Stremio Addons -->
+        <section class="settings-section">
+            <h2 class="section-title">Stremio Addons</h2>
+            <p class="section-description">Manage your Stremio addon integrations</p>
+            
+            <div class="addon-input-group">
+                <input type="text" id="addon-manifest-input" placeholder="https://addon.com/manifest.json">
+                <button id="install-addon-btn" class="btn-primary">Add</button>
+            </div>
+            
+            <div id="installed-addons-list" class="addons-list">
+                <!-- Addons will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Debrid Services -->
+        <section class="settings-section">
+            <h2 class="section-title">Debrid Services</h2>
+            <p class="section-description">Configure premium debrid services for instant streaming</p>
+            
+            <div class="toggle-group">
+                <label class="toggle-label">
+                    <input type="checkbox" id="use-debrid-toggle">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Use Debrid for streams</span>
+                </label>
+            </div>
+            
+            <div id="debrid-config-container" class="debrid-config">
+                <div class="input-group">
+                    <label for="debrid-provider-select">Provider</label>
+                    <select id="debrid-provider-select">
+                        <option value="realdebrid">Real-Debrid</option>
+                        <option value="alldebrid">AllDebrid</option>
+                        <option value="torbox">TorBox</option>
+                        <option value="premiumize">Premiumize</option>
+                    </select>
+                </div>
+                
+                <!-- Real-Debrid OAuth Section -->
+                <div id="rd-auth-section" class="auth-section">
+                    <div class="auth-status">
+                        <span id="rd-status" class="status-badge status-error">Not logged in</span>
+                        <button id="rd-login-btn" class="btn-success">Login with Real-Debrid</button>
+                    </div>
+                    <p class="help-text">No password needed. Authenticate via device code.</p>
+                </div>
+                
+                <!-- API Key Section (for other providers) -->
+                <div id="api-key-section" class="input-group" style="display: none;">
+                    <label for="debrid-api-input">API Key</label>
+                    <input type="password" id="debrid-api-input" placeholder="Enter API Key">
+                </div>
+            </div>
+        </section>
+
+        <!-- Player Settings -->
+        <section class="settings-section">
+            <h2 class="section-title">Player Settings</h2>
+            <p class="section-description">Choose your preferred video player</p>
+            
+            <div class="input-group">
+                <label for="player-type-select">Video Player</label>
+                <select id="player-type-select">
+                    <option value="html">HTML Player (Default)</option>
+                    <option value="playtorrio">PlayTorrio Player</option>
+                    <option value="nodempv">Node MPV (Windows only)</option>
+                </select>
+            </div>
+            
+            <!-- MPV Path (only shown when nodempv selected) -->
+            <div id="mpv-path-section" class="input-group" style="display: none;">
+                <label for="mpv-path-input">Custom MPV Path (optional)</label>
+                <div class="path-input-group">
+                    <input type="text" id="mpv-path-input" placeholder="Leave empty to use global MPV">
+                    <button id="browse-mpv-btn" class="btn-secondary">Browse</button>
+                </div>
+                <a href="#" id="download-mpv-btn" class="download-link">Download MPV</a>
+            </div>
+        </section>
+
+        <!-- Torrent Engine Settings -->
+        <section class="settings-section">
+            <h2 class="section-title">Torrent Engine</h2>
+            <p class="section-description" id="engine-description">Choose your torrent streaming engine</p>
+            
+            <div class="input-group">
+                <label for="torrent-engine-select">Engine Type</label>
+                <select id="torrent-engine-select">
+                    <option value="stremio">Stremio Engine</option>
+                    <option value="webtorrent">WebTorrent</option>
+                    <option value="torrentstream">TorrentStream</option>
+                    <option value="hybrid">Hybrid (WebTorrent + TorrentStream)</option>
+                </select>
+            </div>
+            
+            <!-- Engine Instances (only for torrentstream/hybrid) -->
+            <div id="engine-instances-container" class="input-group" style="display: none;">
+                <label for="engine-instances-slider">Engine Instances: <span id="instance-count-label">1</span></label>
+                <input type="range" id="engine-instances-slider" min="1" max="3" value="1" class="slider">
+            </div>
+        </section>
+
+        <!-- Switch Mode -->
+        <section class="settings-section">
+            <h2 class="section-title">Interface Mode</h2>
+            <p class="section-description">Switch between Advanced and Basic modes</p>
+            
+            <button id="switch-mode-btn" class="btn-mode-switch">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12M8 12h12M8 17h12M3 7h.01M3 12h.01M3 17h.01"/>
+                </svg>
+                Switch to Basic Mode
+            </button>
+        </section>
+    </div>
+
+    <!-- Footer with Save Button -->
+    <footer class="settings-footer">
+        <button id="save-settings-btn" class="btn-save">Save Settings</button>
+    </footer>
+
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+
+    <script src="js/titlebar.js"></script>
+    <script type="module" src="js/settings.js"></script>
+</body>
+</html>

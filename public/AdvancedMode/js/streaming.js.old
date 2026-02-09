@@ -1,0 +1,1078 @@
+// Streaming Mode - Stream Extraction & Player
+let streamingModeEnabled = true;
+let currentProvider = 'videasy';
+let currentStreamUrl = null;
+let currentSubtitles = [];
+let isLoadingStream = false;
+
+// Load streaming mode setting
+function loadStreamingModeSetting() {
+    try {
+        const settings = JSON.parse(localStorage.getItem('streamingModeSettings') || '{}');
+        streamingModeEnabled = settings.enabled !== false; // Default ON
+        console.log('[StreamingMode] Loaded setting:', streamingModeEnabled);
+    } catch (e) {
+        streamingModeEnabled = true;
+    }
+}
+
+// Save streaming mode setting
+function saveStreamingModeSetting(enabled) {
+    try {
+        localStorage.setItem('streamingModeSettings', JSON.stringify({ enabled }));
+        streamingModeEnabled = enabled;
+        console.log('[StreamingMode] Saved setting:', enabled);
+    } catch (e) {
+        console.error('[StreamingMode] Failed to save setting:', e);
+    }
+}
+
+// Initialize streaming mode
+loadStreamingModeSetting();
+
+// Provider URLs
+const PROVIDERS = {
+    videasy: {
+        name: 'Videasy',
+        movie: (tmdbId) => `https://player.videasy.net/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://player.videasy.net/tv/${tmdbId}/${season}/${episode}`
+    },
+    vidfast: {
+        name: 'Vidfast',
+        movie: (tmdbId) => `https://vidfast.pro/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidfast.pro/tv/${tmdbId}/${season}/${episode}`
+    },
+    vidlink: {
+        name: 'Vidlink',
+        movie: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`
+    },
+    flixer: {
+        name: 'Flixer',
+        movie: (tmdbId) => `https://flixer.sh/watch/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://flixer.sh/watch/tv/${tmdbId}/${season}/${episode}`
+    }
+};
+
+// Get provider URL
+function getProviderUrl(provider, type, tmdbId, season = null, episode = null) {
+    const prov = PROVIDERS[provider];
+    if (!prov) return null;
+    
+    if (type === 'movie') {
+        return prov.movie(tmdbId);
+    } else {
+        return prov.tv(tmdbId, season, episode);
+    }
+}
+
+// Extract stream from URL
+async function extractStream(url, provider = currentProvider) {
+    try {
+        console.log('[StreamExtractor] Extracting from:', url);
+        
+        // Add delay for Flixer (it's slower)
+        if (provider === 'flixer') {
+            console.log('[StreamExtractor] Waiting 3 seconds for Flixer...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        
+        await window.electronAPI.extractStream(url);
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                window.electronAPI.removeStreamListener(handler);
+                reject(new Error('Stream extraction timeout'));
+            }, 45000);
+            
+            const handler = (data) => {
+                clearTimeout(timeout);
+                window.electronAPI.removeStreamListener(handler);
+                console.log('[StreamExtractor] Stream detected:', data);
+                resolve(data.proxyUrl);
+            };
+            
+            window.electronAPI.onStreamDetected(handler);
+        });
+    } catch (error) {
+        console.error('[StreamExtractor] Error:', error);
+        throw error;
+    }
+}
+
+// Load subtitles from wyzie.ru
+async function loadSubtitles(tmdbId, season = null, episode = null) {
+    try {
+        let url = `https://sub.wyzie.ru/search?id=${tmdbId}`;
+        if (season && episode) {
+            url += `&season=${season}&episode=${episode}`;
+        }
+        
+        console.log('[Subtitles] Loading from:', url);
+        
+        const response = await fetch(url);
+        const subs = await response.json();
+        
+        console.log('[Subtitles] Loaded:', subs.length, 'subtitles');
+        return subs || [];
+    } catch (error) {
+        console.error('[Subtitles] Error loading:', error);
+        return [];
+    }
+}
+
+// Show loading screen
+function showLoadingScreen(posterUrl, title) {
+    const loadingScreen = document.getElementById('stream-loading-screen');
+    if (!loadingScreen) return;
+    
+    const poster = loadingScreen.querySelector('.loading-poster');
+    const titleEl = loadingScreen.querySelector('.loading-title');
+    const statusEl = loadingScreen.querySelector('.loading-status');
+    
+    if (poster) poster.style.backgroundImage = `url(${posterUrl})`;
+    if (titleEl) titleEl.textContent = title;
+    if (statusEl) statusEl.textContent = 'Getting streams...';
+    
+    loadingScreen.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Hide loading screen
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('stream-loading-screen');
+    if (!loadingScreen) return;
+    
+    loadingScreen.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Update loading status
+function updateLoadingStatus(status) {
+    const statusEl = document.querySelector('.loading-status');
+    if (statusEl) statusEl.textContent = status;
+}
+
+// Show stream player
+function showStreamPlayer() {
+    const player = document.getElementById('stream-player-container');
+    if (!player) return;
+    
+    player.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Initialize player controls after showing
+    initPlayerControls();
+}
+
+// Initialize player controls (called when player is shown)
+function initPlayerControls() {
+    console.log('[StreamingMode] Initializing player controls...');
+    
+    // Back button
+    const playerBackBtn = document.getElementById('stream-player-back');
+    if (playerBackBtn) {
+        // Remove old listeners by cloning
+        const newBackBtn = playerBackBtn.cloneNode(true);
+        playerBackBtn.parentNode.replaceChild(newBackBtn, playerBackBtn);
+        
+        newBackBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StreamingMode] Back button clicked');
+            hideStreamPlayer();
+        });
+    }
+    
+    // Play/pause button
+    const playPauseBtn = document.getElementById('stream-play-pause');
+    const video = document.getElementById('stream-video');
+    
+    if (playPauseBtn && video) {
+        // Remove old listeners by cloning
+        const newPlayPauseBtn = playPauseBtn.cloneNode(true);
+        playPauseBtn.parentNode.replaceChild(newPlayPauseBtn, playPauseBtn);
+        
+        newPlayPauseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StreamingMode] Play/pause clicked, paused:', video.paused);
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+        
+        video.addEventListener('play', () => {
+            newPlayPauseBtn.innerHTML = '<i class="material-icons">pause</i>';
+        });
+        
+        video.addEventListener('pause', () => {
+            newPlayPauseBtn.innerHTML = '<i class="material-icons">play_arrow</i>';
+        });
+    }
+    
+    // Fullscreen button
+    const fullscreenBtn = document.getElementById('stream-fullscreen');
+    if (fullscreenBtn) {
+        // Remove old listeners by cloning
+        const newFullscreenBtn = fullscreenBtn.cloneNode(true);
+        fullscreenBtn.parentNode.replaceChild(newFullscreenBtn, fullscreenBtn);
+        
+        newFullscreenBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StreamingMode] Fullscreen clicked');
+            const playerContainer = document.getElementById('stream-player-container');
+            if (!document.fullscreenElement) {
+                playerContainer.requestFullscreen().catch(err => {
+                    console.error('[StreamingMode] Fullscreen error:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    }
+    
+    // Volume button and slider
+    const volumeBtn = document.getElementById('stream-volume');
+    const volumeSlider = document.getElementById('stream-volume-slider');
+    if (volumeBtn && volumeSlider && video) {
+        // Remove old listeners by cloning
+        const newVolumeBtn = volumeBtn.cloneNode(true);
+        volumeBtn.parentNode.replaceChild(newVolumeBtn, volumeBtn);
+        
+        const newVolumeSlider = volumeSlider.cloneNode(true);
+        volumeSlider.parentNode.replaceChild(newVolumeSlider, volumeSlider);
+        
+        // Load saved volume
+        const savedVolume = localStorage.getItem('playerVolume') || '100';
+        video.volume = parseInt(savedVolume) / 100;
+        newVolumeSlider.value = savedVolume;
+        
+        // Update icon based on volume
+        const updateVolumeIcon = (volume) => {
+            const icon = newVolumeBtn.querySelector('.material-icons');
+            if (volume === 0) {
+                icon.textContent = 'volume_off';
+            } else if (volume < 50) {
+                icon.textContent = 'volume_down';
+            } else {
+                icon.textContent = 'volume_up';
+            }
+        };
+        
+        updateVolumeIcon(parseInt(savedVolume));
+        
+        // Volume slider
+        newVolumeSlider.addEventListener('input', (e) => {
+            const volume = parseInt(e.target.value);
+            video.volume = volume / 100;
+            updateVolumeIcon(volume);
+            localStorage.setItem('playerVolume', volume.toString());
+        });
+        
+        // Volume button (mute/unmute)
+        let lastVolume = parseInt(savedVolume);
+        newVolumeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (video.volume > 0) {
+                lastVolume = Math.round(video.volume * 100);
+                video.volume = 0;
+                newVolumeSlider.value = '0';
+                updateVolumeIcon(0);
+            } else {
+                video.volume = lastVolume / 100;
+                newVolumeSlider.value = lastVolume.toString();
+                updateVolumeIcon(lastVolume);
+            }
+        });
+    }
+    
+    // Settings button
+    const settingsBtn = document.getElementById('stream-settings');
+    const settingsMenu = document.getElementById('stream-settings-menu');
+    if (settingsBtn && settingsMenu) {
+        // Remove old listeners by cloning
+        const newSettingsBtn = settingsBtn.cloneNode(true);
+        settingsBtn.parentNode.replaceChild(newSettingsBtn, settingsBtn);
+        
+        newSettingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StreamingMode] Settings clicked');
+            settingsMenu.classList.toggle('visible');
+            // Close subs menu if open
+            const subsMenu = document.getElementById('stream-subs-menu');
+            if (subsMenu) subsMenu.classList.remove('visible');
+        });
+    }
+    
+    // Subtitles button
+    const subsBtn = document.getElementById('stream-subs');
+    const subsMenu = document.getElementById('stream-subs-menu');
+    if (subsBtn && subsMenu) {
+        // Remove old listeners by cloning
+        const newSubsBtn = subsBtn.cloneNode(true);
+        subsBtn.parentNode.replaceChild(newSubsBtn, subsBtn);
+        
+        newSubsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StreamingMode] Subtitles clicked');
+            subsMenu.classList.toggle('visible');
+            // Close settings menu if open
+            const settingsMenu = document.getElementById('stream-settings-menu');
+            if (settingsMenu) settingsMenu.classList.remove('visible');
+        });
+    }
+    
+    // Provider buttons inside settings menu
+    document.querySelectorAll('.provider-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const provider = btn.dataset.provider;
+            console.log('[StreamingMode] Provider clicked:', provider);
+            changeProvider(provider);
+            
+            // Update active state
+            document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Close menu
+            if (settingsMenu) settingsMenu.classList.remove('visible');
+        });
+    });
+    
+    console.log('[StreamingMode] Player controls initialized');
+}
+
+// Hide stream player
+function hideStreamPlayer() {
+    const player = document.getElementById('stream-player-container');
+    if (!player) return;
+    
+    player.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Stop video and cleanup
+    const video = document.getElementById('stream-video');
+    if (video) {
+        video.pause();
+        
+        // Cleanup HLS instance if exists
+        if (video.hlsInstance) {
+            video.hlsInstance.destroy();
+            video.hlsInstance = null;
+        }
+        
+        video.src = '';
+        video.load(); // Reset video element
+    }
+    
+    // Reset current stream data
+    currentStreamUrl = null;
+    currentSubtitles = [];
+}
+
+// Play stream
+async function playStream(type, tmdbId, posterUrl, title, season = null, episode = null) {
+    if (!streamingModeEnabled) {
+        console.log('[StreamingMode] Disabled, using default player');
+        return false;
+    }
+    
+    if (isLoadingStream) {
+        console.log('[StreamingMode] Already loading a stream');
+        return true;
+    }
+    
+    isLoadingStream = true;
+    
+    // Get backdrop image instead of poster
+    let backdropUrl = posterUrl;
+    try {
+        const API_KEY = 'c3515fdc674ea2bd7b514f4bc3616a4a';
+        const BASE_URL = 'https://api.themoviedb.org/3';
+        const IMG_BASE_URL = 'https://image.tmdb.org/t/p';
+        
+        const detailsUrl = `${BASE_URL}/${type}/${tmdbId}?api_key=${API_KEY}`;
+        const response = await fetch(detailsUrl);
+        const data = await response.json();
+        
+        if (data.backdrop_path) {
+            backdropUrl = `${IMG_BASE_URL}/original${data.backdrop_path}`;
+        }
+    } catch (error) {
+        console.log('[StreamingMode] Could not fetch backdrop, using poster');
+    }
+    
+    // Store media info for provider switching
+    window.currentMediaInfo = { type, tmdbId, posterUrl: backdropUrl, title, season, episode };
+    
+    try {
+        // Show loading screen with backdrop
+        showLoadingScreen(backdropUrl, title);
+        
+        // Get provider URL
+        const providerUrl = getProviderUrl(currentProvider, type, tmdbId, season, episode);
+        if (!providerUrl) {
+            throw new Error('Invalid provider or parameters');
+        }
+        
+        updateLoadingStatus(`Extracting from ${PROVIDERS[currentProvider].name}...`);
+        
+        // Extract stream
+        const streamUrl = await extractStream(providerUrl, currentProvider);
+        currentStreamUrl = streamUrl;
+        
+        updateLoadingStatus('Loading subtitles...');
+        
+        // Load subtitles
+        currentSubtitles = await loadSubtitles(tmdbId, season, episode);
+        
+        // Hide loading, show player
+        hideLoadingScreen();
+        showStreamPlayer();
+        
+        // Load stream into player
+        loadStreamIntoPlayer(streamUrl, title);
+        
+        // Load subtitles into player
+        loadSubtitlesIntoPlayer(currentSubtitles);
+        
+        return true;
+    } catch (error) {
+        console.error('[StreamingMode] Error:', error);
+        hideLoadingScreen();
+        isLoadingStream = false;
+        alert(`Failed to load stream: ${error.message}`);
+        return false;
+    } finally {
+        isLoadingStream = false;
+    }
+}
+
+// Load stream into video player using Video.js
+function loadStreamIntoPlayer(streamUrl, title) {
+    const video = document.getElementById('stream-video');
+    const titleEl = document.getElementById('stream-player-title');
+    
+    if (titleEl) titleEl.textContent = title;
+    
+    // Destroy old Video.js instance if exists
+    if (window.vjsPlayer) {
+        try {
+            window.vjsPlayer.dispose();
+        } catch (e) {
+            console.log('[Player] Error disposing player:', e);
+        }
+        window.vjsPlayer = null;
+    }
+    
+    // Initialize Video.js with proper text track settings but NO controls
+    window.vjsPlayer = videojs(video, {
+        controls: false,  // Disable Video.js controls, use custom ones
+        autoplay: false,
+        preload: 'auto',
+        fluid: false,
+        responsive: false,
+        fill: true,
+        html5: {
+            vhs: {
+                overrideNative: true
+            },
+            nativeVideoTracks: false,
+            nativeAudioTracks: false,
+            nativeTextTracks: false
+        },
+        textTrackSettings: false,  // Disable settings dialog
+        textTrackDisplay: {
+            allowMultipleShowingTracks: false
+        }
+    });
+    
+    // Set source
+    window.vjsPlayer.src({
+        src: streamUrl,
+        type: streamUrl.includes('.m3u8') ? 'application/x-mpegURL' : 'video/mp4'
+    });
+    
+    // Apply subtitle customization
+    const settings = JSON.parse(localStorage.getItem('subtitleSettings') || '{}');
+    const fontSize = settings.fontSize || 150;
+    
+    const style = document.createElement('style');
+    style.id = 'videojs-subtitle-style';
+    const existingStyle = document.getElementById('videojs-subtitle-style');
+    if (existingStyle) existingStyle.remove();
+    
+    style.textContent = `
+        .video-js .vjs-text-track-display {
+            font-size: ${fontSize}% !important;
+        }
+        .vjs-text-track-cue {
+            font-size: ${fontSize}% !important;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Play
+    window.vjsPlayer.ready(function() {
+        console.log('[Player] Video.js ready');
+        this.play().catch(e => console.log('[Player] Autoplay prevented:', e));
+    });
+    
+    console.log('[Player] Video.js initialized with source:', streamUrl);
+}
+
+// Load subtitles into player
+function loadSubtitlesIntoPlayer(subtitles) {
+    const subsList = document.getElementById('stream-subs-list');
+    if (!subsList) return;
+    
+    subsList.innerHTML = '';
+    
+    if (subtitles.length === 0) {
+        subsList.innerHTML = '<div class="no-subs">No subtitles available</div>';
+        return;
+    }
+    
+    // Add "No Subtitles" option
+    const noSubItem = document.createElement('div');
+    noSubItem.className = 'sub-item';
+    noSubItem.innerHTML = `
+        <i class="material-icons sub-icon">subtitles_off</i>
+        <div class="sub-info">
+            <div class="sub-title">No Subtitles</div>
+        </div>
+    `;
+    noSubItem.onclick = () => disableSubtitles();
+    subsList.appendChild(noSubItem);
+    
+    // Add search box
+    const searchBox = document.createElement('div');
+    searchBox.className = 'sub-search-box';
+    searchBox.innerHTML = `
+        <input type="text" class="sub-search-input" placeholder="Search subtitles..." />
+    `;
+    subsList.appendChild(searchBox);
+    
+    // Group subtitles by language
+    const grouped = {};
+    subtitles.forEach(sub => {
+        const lang = sub.language || 'unknown';
+        if (!grouped[lang]) {
+            grouped[lang] = [];
+        }
+        grouped[lang].push(sub);
+    });
+    
+    // Sort languages: English first, then alphabetically
+    const sortedLangs = Object.keys(grouped).sort((a, b) => {
+        if (a === 'en') return -1;
+        if (b === 'en') return 1;
+        return a.localeCompare(b);
+    });
+    
+    // Create subtitle items grouped by language
+    sortedLangs.forEach(lang => {
+        const subs = grouped[lang];
+        
+        // Language header
+        const langHeader = document.createElement('div');
+        langHeader.className = 'sub-lang-header';
+        langHeader.textContent = subs[0].display || lang.toUpperCase();
+        subsList.appendChild(langHeader);
+        
+        // Subtitle items
+        subs.forEach((sub, index) => {
+            const item = document.createElement('div');
+            item.className = 'sub-item';
+            item.dataset.language = sub.language;
+            item.dataset.display = sub.display || '';
+            item.dataset.release = sub.release || '';
+            item.dataset.url = sub.url;
+            
+            const hiLabel = sub.isHearingImpaired ? '<span class="sub-hi-badge">HI</span>' : '';
+            const downloads = sub.downloadCount ? `<span class="sub-downloads">${formatDownloads(sub.downloadCount)} downloads</span>` : '';
+            
+            item.innerHTML = `
+                <img src="${sub.flagUrl}" alt="${sub.language}" class="sub-flag">
+                <div class="sub-info">
+                    <div class="sub-title">${sub.display || sub.language} ${hiLabel}</div>
+                    ${downloads}
+                </div>
+                <i class="material-icons sub-check-icon">check_circle</i>
+            `;
+            item.onclick = () => selectSubtitle(sub, item);
+            subsList.appendChild(item);
+        });
+    });
+    
+    // Add search functionality
+    const searchInput = subsList.querySelector('.sub-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = subsList.querySelectorAll('.sub-item');
+            const headers = subsList.querySelectorAll('.sub-lang-header');
+            
+            items.forEach(item => {
+                const display = (item.dataset.display || '').toLowerCase();
+                const release = (item.dataset.release || '').toLowerCase();
+                const matches = display.includes(query) || release.includes(query);
+                item.style.display = matches ? 'flex' : 'none';
+            });
+            
+            // Hide headers if no items visible in that language
+            headers.forEach(header => {
+                const nextItems = [];
+                let next = header.nextElementSibling;
+                while (next && next.classList.contains('sub-item')) {
+                    nextItems.push(next);
+                    next = next.nextElementSibling;
+                }
+                const hasVisible = nextItems.some(item => item.style.display !== 'none');
+                header.style.display = hasVisible ? 'block' : 'none';
+            });
+        });
+    }
+}
+
+// Disable subtitles with Video.js
+function disableSubtitles() {
+    console.log('[Subtitles] Disabling all subtitles');
+    
+    if (window.vjsPlayer) {
+        // Remove all remote text tracks
+        const existingTracks = window.vjsPlayer.remoteTextTracks();
+        const tracksToRemove = [];
+        for (let i = 0; i < existingTracks.length; i++) {
+            tracksToRemove.push(existingTracks[i]);
+        }
+        tracksToRemove.forEach(track => {
+            window.vjsPlayer.removeRemoteTextTrack(track);
+        });
+        
+        // Also disable all text tracks
+        const tracks = window.vjsPlayer.textTracks();
+        for (let i = 0; i < tracks.length; i++) {
+            tracks[i].mode = 'disabled';
+        }
+        
+        console.log('[Subtitles] All tracks removed/disabled');
+    }
+    
+    // Remove active state from all subtitle items
+    document.querySelectorAll('.sub-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Close menu
+    const subsMenu = document.getElementById('stream-subs-menu');
+    if (subsMenu) subsMenu.classList.remove('visible');
+    
+    console.log('[Subtitles] Disabled');
+}
+
+// Format download count
+function formatDownloads(count) {
+    if (count >= 1000000) {
+        return (count / 1000000).toFixed(1) + 'M';
+    } else if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return count.toString();
+}
+
+// Select subtitle with Video.js
+function selectSubtitle(sub, itemElement) {
+    if (!sub || !window.vjsPlayer) {
+        console.error('[Subtitles] Cannot select subtitle - player not ready');
+        return;
+    }
+    
+    console.log('[Subtitles] Selecting:', sub.display, sub.url);
+    
+    // Remove active state from all items
+    document.querySelectorAll('.sub-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Add active state to selected item
+    if (itemElement) {
+        itemElement.classList.add('active');
+    }
+    
+    // Remove all existing text tracks first
+    const existingTracks = window.vjsPlayer.remoteTextTracks();
+    const tracksToRemove = [];
+    for (let i = 0; i < existingTracks.length; i++) {
+        tracksToRemove.push(existingTracks[i]);
+    }
+    tracksToRemove.forEach(track => {
+        window.vjsPlayer.removeRemoteTextTrack(track);
+    });
+    
+    console.log('[Subtitles] Removed existing tracks, adding new track...');
+    
+    // Add new subtitle track
+    const trackElement = window.vjsPlayer.addRemoteTextTrack({
+        kind: 'subtitles',
+        label: sub.display || sub.language,
+        srclang: sub.language || 'en',
+        src: sub.url,
+        mode: 'showing'
+    }, false);
+    
+    console.log('[Subtitles] Track added:', trackElement);
+    
+    // Force enable the track after a short delay
+    setTimeout(() => {
+        const tracks = window.vjsPlayer.textTracks();
+        console.log('[Subtitles] Total tracks:', tracks.length);
+        
+        for (let i = 0; i < tracks.length; i++) {
+            const track = tracks[i];
+            console.log('[Subtitles] Track', i, ':', track.label, 'mode:', track.mode);
+            
+            // Enable only the last track (the one we just added)
+            if (i === tracks.length - 1) {
+                track.mode = 'showing';
+                console.log('[Subtitles] Enabled track:', track.label);
+            } else {
+                track.mode = 'disabled';
+            }
+        }
+        
+        console.log('[Subtitles] Subtitle track should now be visible');
+    }, 200);
+    
+    // Close menu
+    const subsMenu = document.getElementById('stream-subs-menu');
+    if (subsMenu) subsMenu.classList.remove('visible');
+    
+    console.log('[Subtitles] Subtitle selection complete');
+}
+
+// Apply subtitle customization with Video.js
+function applySubtitleCustomization() {
+    const settings = JSON.parse(localStorage.getItem('subtitleSettings') || '{}');
+    const fontSize = settings.fontSize || 150;
+    
+    const style = document.createElement('style');
+    style.id = 'videojs-subtitle-style';
+    const existingStyle = document.getElementById('videojs-subtitle-style');
+    if (existingStyle) existingStyle.remove();
+    
+    style.textContent = `
+        .video-js .vjs-text-track-display {
+            font-size: ${fontSize}% !important;
+            bottom: 80px !important;
+        }
+        .vjs-text-track-cue {
+            font-size: ${fontSize}% !important;
+        }
+        .video-js .vjs-text-track-cue > div {
+            font-size: ${fontSize}% !important;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    console.log('[Subtitles] Applied customization - Size:', fontSize + '%');
+}
+
+// Change provider
+async function changeProvider(provider) {
+    if (provider === currentProvider) return;
+    
+    const oldProvider = currentProvider;
+    currentProvider = provider;
+    console.log('[StreamingMode] Changed provider from', oldProvider, 'to:', provider);
+    
+    // If player is active, reload stream with new provider
+    const playerContainer = document.getElementById('stream-player-container');
+    if (playerContainer && playerContainer.classList.contains('active')) {
+        // Store current media info
+        if (!window.currentMediaInfo) {
+            console.error('[StreamingMode] No media info stored, cannot reload');
+            return;
+        }
+        
+        const { type, tmdbId, posterUrl, title, season, episode } = window.currentMediaInfo;
+        
+        console.log('[StreamingMode] Reloading stream with new provider...');
+        
+        // Pause video first
+        const video = document.getElementById('stream-video');
+        if (video) {
+            video.pause();
+        }
+        
+        // Hide player, show loading
+        playerContainer.classList.remove('active');
+        showLoadingScreen(posterUrl, title);
+        updateLoadingStatus(`Extracting from ${PROVIDERS[provider].name}...`);
+        
+        try {
+            // Get provider URL
+            const providerUrl = getProviderUrl(provider, type, tmdbId, season, episode);
+            if (!providerUrl) {
+                throw new Error('Invalid provider or parameters');
+            }
+            
+            // Extract stream
+            const streamUrl = await extractStream(providerUrl, provider);
+            currentStreamUrl = streamUrl;
+            
+            // Hide loading, show player
+            hideLoadingScreen();
+            playerContainer.classList.add('active');
+            
+            // Load stream into player
+            loadStreamIntoPlayer(streamUrl, title);
+            
+            // Re-initialize controls
+            initPlayerControls();
+            
+            console.log('[StreamingMode] Stream reloaded successfully');
+        } catch (error) {
+            console.error('[StreamingMode] Error reloading stream:', error);
+            hideLoadingScreen();
+            alert(`Failed to load stream from ${PROVIDERS[provider].name}: ${error.message}`);
+            // Revert provider
+            currentProvider = oldProvider;
+        }
+    }
+}
+
+// Initialize streaming mode UI
+function initStreamingModeUI() {
+    console.log('[StreamingMode] Initializing UI...');
+    
+    // Back button in loading screen - use event delegation
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.loading-back-btn')) {
+            e.stopPropagation();
+            console.log('[StreamingMode] Cancel button clicked');
+            hideLoadingScreen();
+            isLoadingStream = false;
+            if (window.electronAPI && window.electronAPI.closeStreamExtraction) {
+                window.electronAPI.closeStreamExtraction();
+            }
+            // Go back to details page
+            window.history.back();
+        }
+    });
+    
+    // Close menus when clicking outside
+    document.addEventListener('click', (e) => {
+        const settingsBtn = document.getElementById('stream-settings');
+        const settingsMenu = document.getElementById('stream-settings-menu');
+        const subsBtn = document.getElementById('stream-subs');
+        const subsMenu = document.getElementById('stream-subs-menu');
+        
+        if (settingsMenu && settingsBtn && !settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
+            settingsMenu.classList.remove('visible');
+        }
+        
+        if (subsMenu && subsBtn && !subsBtn.contains(e.target) && !subsMenu.contains(e.target)) {
+            subsMenu.classList.remove('visible');
+        }
+    });
+    
+    console.log('[StreamingMode] UI initialized');
+}
+
+// Export functions
+window.streamingMode = {
+    enabled: () => streamingModeEnabled,
+    setEnabled: saveStreamingModeSetting,
+    playStream,
+    changeProvider,
+    init: initStreamingModeUI
+};
+
+
+// Video time display update
+function updateTimeDisplay() {
+    const video = document.getElementById('stream-video');
+    const timeDisplay = document.getElementById('stream-time-display');
+    
+    if (!video || !timeDisplay) return;
+    
+    const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+    
+    const current = formatTime(video.currentTime);
+    const duration = formatTime(video.duration || 0);
+    
+    timeDisplay.textContent = `${current} / ${duration}`;
+}
+
+// Progress bar update
+function updateProgressBar() {
+    const video = document.getElementById('stream-video');
+    const progressBar = document.getElementById('stream-progress-bar');
+    
+    if (!video || !progressBar) return;
+    
+    const percent = (video.currentTime / video.duration) * 100;
+    progressBar.style.width = `${percent}%`;
+}
+
+// Add video event listeners for time and progress
+document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('stream-video');
+    
+    if (video) {
+        video.addEventListener('timeupdate', () => {
+            updateTimeDisplay();
+            updateProgressBar();
+        });
+        
+        video.addEventListener('loadedmetadata', () => {
+            updateTimeDisplay();
+        });
+        
+        // Progress bar click to seek - improved hit detection
+        const progressWrapper = document.querySelector('.stream-progress-wrapper');
+        if (progressWrapper) {
+            progressWrapper.style.cursor = 'pointer';
+            
+            progressWrapper.addEventListener('click', (e) => {
+                const progressContainer = progressWrapper.querySelector('.stream-progress-container');
+                if (!progressContainer) return;
+                
+                const rect = progressContainer.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                
+                if (percent >= 0 && percent <= 1 && video.duration) {
+                    video.currentTime = percent * video.duration;
+                    console.log('[Player] Seeked to', Math.floor(percent * 100) + '%');
+                }
+            });
+        }
+    }
+});
+
+
+// Auto-hide controls after inactivity
+let controlsHideTimeout = null;
+
+function showControls() {
+    const playerContainer = document.getElementById('stream-player-container');
+    if (playerContainer) {
+        playerContainer.classList.remove('hide-controls');
+        
+        // Clear existing timeout
+        if (controlsHideTimeout) {
+            clearTimeout(controlsHideTimeout);
+        }
+        
+        // Set new timeout to hide controls after 3 seconds
+        controlsHideTimeout = setTimeout(() => {
+            const video = document.getElementById('stream-video');
+            // Only hide if video is playing
+            if (video && !video.paused) {
+                playerContainer.classList.add('hide-controls');
+            }
+        }, 3000);
+    }
+}
+
+// Add mouse move listener to show controls
+document.addEventListener('DOMContentLoaded', () => {
+    const playerContainer = document.getElementById('stream-player-container');
+    const video = document.getElementById('stream-video');
+    
+    if (playerContainer) {
+        playerContainer.addEventListener('mousemove', showControls);
+        playerContainer.addEventListener('click', showControls);
+    }
+    
+    if (video) {
+        // Show controls when video is paused
+        video.addEventListener('pause', () => {
+            if (playerContainer) {
+                playerContainer.classList.remove('hide-controls');
+                if (controlsHideTimeout) {
+                    clearTimeout(controlsHideTimeout);
+                }
+            }
+        });
+        
+        // Start auto-hide when video plays
+        video.addEventListener('play', () => {
+            showControls();
+        });
+    }
+});
+
+
+// Initialize subtitle customization controls
+function initSubtitleCustomization() {
+    const sizeSlider = document.getElementById('subtitle-size-slider');
+    const sizeValue = document.getElementById('subtitle-size-value');
+    const delaySlider = document.getElementById('subtitle-delay-slider');
+    const delayValue = document.getElementById('subtitle-delay-value');
+    
+    if (!sizeSlider || !delaySlider) return;
+    
+    // Load saved settings
+    const settings = JSON.parse(localStorage.getItem('subtitleSettings') || '{}');
+    const fontSize = settings.fontSize || 150;
+    const delay = settings.delay || 0;
+    
+    sizeSlider.value = fontSize;
+    sizeValue.textContent = fontSize + '%';
+    delaySlider.value = delay;
+    delayValue.textContent = delay + 's';
+    
+    // Font size slider
+    sizeSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        sizeValue.textContent = value + '%';
+        
+        const settings = JSON.parse(localStorage.getItem('subtitleSettings') || '{}');
+        settings.fontSize = value;
+        localStorage.setItem('subtitleSettings', JSON.stringify(settings));
+        
+        applySubtitleCustomization();
+    });
+    
+    // Delay slider
+    delaySlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        delayValue.textContent = value + 's';
+        
+        const settings = JSON.parse(localStorage.getItem('subtitleSettings') || '{}');
+        settings.delay = value;
+        localStorage.setItem('subtitleSettings', JSON.stringify(settings));
+        
+        // Note: Delay would need to be implemented by adjusting cue timings
+        // This is complex and may require subtitle file manipulation
+        console.log('[Subtitles] Delay set to:', value);
+    });
+    
+    console.log('[Subtitles] Customization controls initialized');
+}
+
+// Call this when player controls are initialized
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        initSubtitleCustomization();
+    }, 1000);
+});

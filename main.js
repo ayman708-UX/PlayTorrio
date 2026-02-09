@@ -1729,29 +1729,29 @@ async function migrateLocalStorageIfNeeded() {
 }
 
 function getStartUrl() {
-    let startUrl = 'http://localhost:6987/basicmode/index.html'; // Default to Basic Mode
+    let startUrl = 'http://localhost:6987/AdvancedMode/index.html'; // Default to Advanced Mode for 2.7.8
     try {
         const userDataPath = app.getPath('userData');
         const settingsPath = path.join(userDataPath, 'settings.json');
         
-        // Force everyone to Basic Mode for version 2.6.1 update
-        const FORCE_BASIC_VERSION = '2.6.1';
+        // Force everyone to Advanced Mode for version 2.7.8 update
+        const FORCE_ADVANCED_VERSION = '2.7.8';
         const currentVersion = app.getVersion();
         
         if (fs.existsSync(settingsPath)) {
             const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
             
-            // Check if this is the first launch of 2.6.1 (force reset to basic mode)
-            if (currentVersion === FORCE_BASIC_VERSION && settings.lastVersion !== FORCE_BASIC_VERSION) {
-                console.log('[Settings] Version 2.6.1 detected - switching all users to Basic Mode');
-                settings.preferredMode = 'basic';
-                settings.lastVersion = FORCE_BASIC_VERSION;
+            // Check if this is the first launch of 2.7.8 (force reset to advanced mode)
+            if (currentVersion === FORCE_ADVANCED_VERSION && settings.lastVersion !== FORCE_ADVANCED_VERSION) {
+                console.log('[Settings] Version 2.7.8 detected - switching all users to Advanced Mode');
+                settings.preferredMode = 'advanced';
+                settings.lastVersion = FORCE_ADVANCED_VERSION;
                 fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-                startUrl = 'http://localhost:6987/basicmode/index.html';
+                startUrl = 'http://localhost:6987/AdvancedMode/index.html';
             } else {
                 // Normal behavior - respect user preference
                 if (settings.preferredMode === 'advanced') {
-                    startUrl = 'http://localhost:6987/index.html';
+                    startUrl = 'http://localhost:6987/AdvancedMode/index.html';
                 } else {
                     startUrl = 'http://localhost:6987/basicmode/index.html';
                 }
@@ -1762,13 +1762,13 @@ function getStartUrl() {
                 }
             }
         } else {
-            // If settings don't exist, create default with basic mode
+            // If settings don't exist, create default with advanced mode for 2.7.8
             const defaultSettings = { 
-                preferredMode: 'basic',
+                preferredMode: 'advanced',
                 lastVersion: currentVersion
             };
             fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
-            console.log('[Settings] Created default settings with Basic Mode');
+            console.log('[Settings] Created default settings with Advanced Mode');
         }
     } catch (e) {
         console.error('[Settings] Error reading preferred mode:', e.message);
@@ -1783,9 +1783,9 @@ function createWindow() {
         height: 900,
         minWidth: 1200,
         minHeight: 800,
-        // Use native title bar on macOS; keep frameless custom bar on Windows/Linux
-        frame: isMac ? true : false,
-        titleBarStyle: isMac ? 'default' : 'hidden',
+        // Frameless on all platforms for custom title bar
+        frame: false,
+        titleBarStyle: 'hidden',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -4337,6 +4337,655 @@ ipcMain.handle('set-preferred-mode', async (event, mode) => {
         }
     });
 }
+
+// ===================================================
+// STREAM EXTRACTOR - HLS/DASH Stream Detection & Proxy
+// ===================================================
+
+let streamExtractionWindow = null;
+let streamDetected = false;
+const STREAM_PROXY_PORT = 8765;
+const streamCapturedHeaders = {};
+let streamProxyServer = null;
+
+// Start stream proxy server
+function startStreamProxyServer() {
+    if (streamProxyServer) return;
+
+    const express = require('express');
+    const axios = require('axios');
+    const cors = require('cors');
+    
+    const proxyApp = express();
+    proxyApp.use(cors());
+
+    proxyApp.get('/stream-proxy', async (req, res) => {
+        const targetUrl = req.query.url;
+        
+        if (!targetUrl) {
+            return res.status(400).send('Missing url parameter');
+        }
+
+        console.log('[StreamProxy] Proxying:', targetUrl);
+
+        try {
+            const headers = streamCapturedHeaders[targetUrl] || streamCapturedHeaders[Object.keys(streamCapturedHeaders)[0]] || {};
+            const requestHeaders = {
+                'User-Agent': headers.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': headers.referer || '',
+                'Origin': headers.origin || ''
+            };
+
+            if (req.headers.range) {
+                requestHeaders['Range'] = req.headers.range;
+            }
+
+            // Determine if this is a manifest or binary data
+            // Only treat as manifest if it's actually a playlist file, not a segment
+            const isManifest = (targetUrl.includes('.m3u8') || targetUrl.includes('.mpd')) && 
+                               !targetUrl.match(/\.(ts|jpg|jpeg|png|mp4|m4s)$/i) &&
+                               !targetUrl.match(/playlist_\d+/i) &&
+                               !targetUrl.match(/segment|chunk|frag/i);
+            const isEncryptionKey = targetUrl.includes('enc.key') || targetUrl.includes('.key');
+            
+            const response = await axios({
+                method: 'GET',
+                url: targetUrl,
+                headers: requestHeaders,
+                responseType: (isManifest || isEncryptionKey) ? 'arraybuffer' : 'stream',
+                validateStatus: () => true
+            });
+
+            console.log('[StreamProxy] Response status:', response.status, 'for', targetUrl.substring(0, 100));
+
+            res.status(response.status);
+            
+            Object.keys(response.headers).forEach(key => {
+                if (key.toLowerCase() !== 'content-encoding') {
+                    res.setHeader(key, response.headers[key]);
+                }
+            });
+
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', '*');
+
+            if (isManifest) {
+                const data = response.data.toString('utf-8');
+                console.log('[StreamProxy] Rewriting manifest...');
+                console.log('[StreamProxy] Original manifest length:', data.length);
+                console.log('[StreamProxy] Original manifest first 800 chars:\n', data.substring(0, 800));
+                
+                const rewritten = rewriteStreamManifest(data, targetUrl);
+                
+                console.log('[StreamProxy] Rewritten manifest length:', rewritten.length);
+                console.log('[StreamProxy] Rewritten manifest first 800 chars:\n', rewritten.substring(0, 800));
+                
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                res.setHeader('Content-Length', Buffer.byteLength(rewritten, 'utf-8'));
+                res.send(rewritten);
+            } else if (isEncryptionKey) {
+                // Send encryption key as-is (binary data)
+                console.log('[StreamProxy] Proxying encryption key');
+                res.setHeader('Content-Type', 'application/octet-stream');
+                res.send(response.data);
+            } else {
+                // Stream video segments
+                response.data.pipe(res);
+            }
+        } catch (error) {
+            console.error('[StreamProxy] Error:', error.message);
+            res.status(500).send('Proxy error: ' + error.message);
+        }
+    });
+
+    streamProxyServer = proxyApp.listen(STREAM_PROXY_PORT, () => {
+        console.log(`[StreamProxy] Server running on port ${STREAM_PROXY_PORT}`);
+    });
+}
+
+function rewriteStreamManifest(content, baseUrl) {
+    const base = new URL(baseUrl);
+    const lines = content.split('\n');
+    
+    console.log('[StreamProxy] Rewriting manifest with base URL:', baseUrl);
+    console.log('[StreamProxy] Total lines:', lines.length);
+    
+    const rewritten = lines.map((line, index) => {
+        const trimmed = line.trim();
+        
+        // Handle empty lines
+        if (trimmed === '') {
+            return line;
+        }
+        
+        // Handle #EXT-X-KEY lines with URI parameter
+        if (trimmed.startsWith('#EXT-X-KEY:')) {
+            const newLine = line.replace(/URI="([^"]+)"/g, (match, uri) => {
+                let fullUrl;
+                
+                if (uri.startsWith('http://') || uri.startsWith('https://')) {
+                    fullUrl = uri;
+                } else if (uri.startsWith('/')) {
+                    fullUrl = `${base.origin}${uri}`;
+                } else {
+                    const basePath = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
+                    fullUrl = `${base.origin}${basePath}${uri}`;
+                }
+                
+                const proxied = `URI="http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
+                console.log('[StreamProxy] Rewrote encryption key URI:', uri, '->', proxied);
+                return proxied;
+            });
+            return newLine;
+        }
+        
+        // Handle #EXT-X-MAP lines with URI parameter (for fMP4 segments)
+        if (trimmed.startsWith('#EXT-X-MAP:')) {
+            const newLine = line.replace(/URI="([^"]+)"/g, (match, uri) => {
+                let fullUrl;
+                
+                if (uri.startsWith('http://') || uri.startsWith('https://')) {
+                    fullUrl = uri;
+                } else if (uri.startsWith('/')) {
+                    fullUrl = `${base.origin}${uri}`;
+                } else {
+                    const basePath = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
+                    fullUrl = `${base.origin}${basePath}${uri}`;
+                }
+                
+                const proxied = `URI="http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
+                console.log('[StreamProxy] Rewrote map URI:', uri, '->', proxied);
+                return proxied;
+            });
+            return newLine;
+        }
+        
+        // Handle other comment lines (including #EXT-X-STREAM-INF, #EXT-X-MEDIA, etc.)
+        if (trimmed.startsWith('#')) {
+            return line;
+        }
+        
+        // Handle URL lines (these are the actual stream URLs)
+        let url = trimmed;
+        let fullUrl;
+        
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            fullUrl = url;
+        } else if (url.startsWith('/')) {
+            fullUrl = `${base.origin}${url}`;
+        } else {
+            // Relative URL - need to resolve against base
+            const basePath = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
+            fullUrl = `${base.origin}${basePath}${url}`;
+        }
+        
+        const proxied = `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}`;
+        
+        if (index < 20) { // Log first 20 URL rewrites for debugging
+            console.log('[StreamProxy] Rewrote URL:', url, '->', proxied.substring(0, 100) + '...');
+        }
+        
+        return proxied;
+    }).join('\n');
+    
+    console.log('[StreamProxy] Manifest rewriting complete');
+    return rewritten;
+}
+
+function setupStreamNetworkInterception(window) {
+    const filter = { urls: ['*://*/*'] };
+    streamDetected = false;
+    
+    window.webContents.session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+        const url = details.url;
+        
+        if (url.includes('m3u8') || url.includes('mpd') || url.includes('.ts') || url.includes('.m4s') || url.includes('playlist')) {
+            console.log('[StreamExtractor] Network request:', url);
+        }
+        
+        // Detect VixSrc playlist URLs (vixsrc.to/playlist/)
+        // Only detect the master playlist (with h=1 parameter), not the quality-specific ones
+        if (url.includes('vixsrc.to/playlist/') && url.includes('h=1') && !streamDetected) {
+            console.log('[StreamExtractor] VixSrc master playlist detected:', url);
+            streamDetected = true;
+            
+            const pageUrl = window.webContents.getURL();
+            
+            streamCapturedHeaders[url] = {
+                referer: details.requestHeaders['Referer'] || details.referrer || pageUrl,
+                origin: details.requestHeaders['Origin'] || new URL(pageUrl).origin,
+                userAgent: details.requestHeaders['User-Agent']
+            };
+            
+            console.log('[StreamExtractor] Captured headers:', streamCapturedHeaders[url]);
+            
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('stream-detected', {
+                    url: url,
+                    proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(url)}`
+                });
+            }
+            
+            setTimeout(() => {
+                if (streamExtractionWindow) {
+                    console.log('[StreamExtractor] Closing extraction window');
+                    streamExtractionWindow.close();
+                    streamExtractionWindow = null;
+                }
+            }, 1000);
+        }
+        
+        // Try to reconstruct m3u8 from .ts segments (for other providers)
+        if (url.includes('.ts') && !streamDetected && url.includes('/video/')) {
+            const tsMatch = url.match(/^(https?:\/\/.+\/video\/\d+p\/)(\d+-\d+\.ts)(.*)$/);
+            if (tsMatch) {
+                const baseUrl = tsMatch[1];
+                const queryParams = tsMatch[3];
+                const reconstructedM3u8 = `${baseUrl}playlist.m3u8${queryParams}`;
+                
+                console.log('[StreamExtractor] Reconstructed m3u8 from .ts segment:', reconstructedM3u8);
+                streamDetected = true;
+                
+                const pageUrl = window.webContents.getURL();
+                
+                streamCapturedHeaders[reconstructedM3u8] = {
+                    referer: details.requestHeaders['Referer'] || details.referrer || pageUrl,
+                    origin: details.requestHeaders['Origin'] || new URL(pageUrl).origin,
+                    userAgent: details.requestHeaders['User-Agent']
+                };
+                
+                console.log('[StreamExtractor] Captured headers:', streamCapturedHeaders[reconstructedM3u8]);
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('stream-detected', {
+                        url: reconstructedM3u8,
+                        proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(reconstructedM3u8)}`
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (streamExtractionWindow) {
+                        console.log('[StreamExtractor] Closing extraction window');
+                        streamExtractionWindow.close();
+                        streamExtractionWindow = null;
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Try to reconstruct mpd from .m4s segments (for DASH streams like Anitaro)
+        if (url.includes('.m4s') && !streamDetected) {
+            // Extract base URL from m4s segment
+            // Example: https://hls-aws.shegu.net/video/1207659/video_1080p_140.m4s?... 
+            // Should become: https://hls-aws.shegu.net/video/1207659/manifest.mpd
+            const m4sMatch = url.match(/^(https?:\/\/[^\/]+\/[^\/]+\/\d+)\//);
+            if (m4sMatch) {
+                const baseUrl = m4sMatch[1];
+                const reconstructedMpd = `${baseUrl}/manifest.mpd`;
+                
+                console.log('[StreamExtractor] Reconstructed mpd from .m4s segment:', reconstructedMpd);
+                streamDetected = true;
+                
+                const pageUrl = window.webContents.getURL();
+                
+                streamCapturedHeaders[reconstructedMpd] = {
+                    referer: details.requestHeaders['Referer'] || details.referrer || pageUrl,
+                    origin: details.requestHeaders['Origin'] || new URL(pageUrl).origin,
+                    userAgent: details.requestHeaders['User-Agent']
+                };
+                
+                console.log('[StreamExtractor] Captured headers:', streamCapturedHeaders[reconstructedMpd]);
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('stream-detected', {
+                        url: reconstructedMpd,
+                        proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(reconstructedMpd)}`
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (streamExtractionWindow) {
+                        console.log('[StreamExtractor] Closing extraction window');
+                        streamExtractionWindow.close();
+                        streamExtractionWindow = null;
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Detect Anitaro/shegu.net streams (prioritize these - they have separate audio/video)
+        if (url.includes('hls.shegu.net') && url.includes('.m3u8') && !streamDetected) {
+            // Only detect the main master m3u8, not the video/audio specific ones
+            if (!url.includes('m3u8_proxy') && !url.includes('/video/') && !url.includes('/audio/')) {
+                console.log('[StreamExtractor] Anitaro master stream detected:', url);
+                streamDetected = true;
+                
+                const pageUrl = window.webContents.getURL();
+                
+                streamCapturedHeaders[url] = {
+                    referer: details.requestHeaders['Referer'] || details.referrer || pageUrl,
+                    origin: details.requestHeaders['Origin'] || new URL(pageUrl).origin,
+                    userAgent: details.requestHeaders['User-Agent']
+                };
+                
+                console.log('[StreamExtractor] Captured headers:', streamCapturedHeaders[url]);
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('stream-detected', {
+                        url: url,
+                        proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(url)}`
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (streamExtractionWindow) {
+                        console.log('[StreamExtractor] Closing extraction window');
+                        streamExtractionWindow.close();
+                        streamExtractionWindow = null;
+                    }
+                }, 1000);
+                
+                return callback({ requestHeaders: details.requestHeaders });
+            }
+        }
+        
+        if ((url.includes('.m3u8') || url.includes('.mpd')) && !streamDetected) {
+            // Ignore tracking pixels, analytics, and URLs that have m3u8 only in query params
+            if (url.includes('ping.gif') || url.includes('analytics') || url.includes('tracking') || 
+                url.includes('jwplayer') || url.includes('jwpltx')) {
+                return callback({ requestHeaders: details.requestHeaders });
+            }
+            
+            const isSegment = /seg-\d+|segment|chunk|frag|\.ts\b|\.m4s\b|\.jpg|\.jpeg|\.png|\/\d+\.m3u8/i.test(url);
+            const isMasterManifest = /master|playlist|index\.m3u8/i.test(url) || (!isSegment && url.includes('.m3u8'));
+            
+            if (isMasterManifest && !isSegment) {
+                console.log('[StreamExtractor] Master stream detected:', url);
+                streamDetected = true;
+                
+                const pageUrl = window.webContents.getURL();
+                
+                streamCapturedHeaders[url] = {
+                    referer: details.requestHeaders['Referer'] || details.referrer || pageUrl,
+                    origin: details.requestHeaders['Origin'] || new URL(pageUrl).origin,
+                    userAgent: details.requestHeaders['User-Agent']
+                };
+                
+                console.log('[StreamExtractor] Captured headers:', streamCapturedHeaders[url]);
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('stream-detected', {
+                        url: url,
+                        proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(url)}`
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (streamExtractionWindow) {
+                        console.log('[StreamExtractor] Closing extraction window');
+                        streamExtractionWindow.close();
+                        streamExtractionWindow = null;
+                    }
+                }, 1000);
+            }
+        }
+        
+        callback({ requestHeaders: details.requestHeaders });
+    });
+
+    window.webContents.session.webRequest.onCompleted(filter, (details) => {
+        const url = details.url;
+        
+        if ((url.includes('.m3u8') || url.includes('.mpd')) && details.statusCode === 200 && !streamDetected) {
+            // Ignore tracking pixels, analytics, and URLs that have m3u8 only in query params
+            if (url.includes('ping.gif') || url.includes('analytics') || url.includes('tracking') || 
+                url.includes('jwplayer') || url.includes('jwpltx')) {
+                return;
+            }
+            
+            const isSegment = /seg-\d+|segment|chunk|frag|\.ts\b|\.m4s\b|\.jpg|\.jpeg|\.png|\/\d+\.m3u8/i.test(url);
+            const isMasterManifest = /master|playlist|index\.m3u8/i.test(url) || (!isSegment && url.includes('.m3u8'));
+            
+            if (isMasterManifest && !isSegment && !streamCapturedHeaders[url]) {
+                console.log('[StreamExtractor] Master stream detected (completed):', url);
+                streamDetected = true;
+                
+                const pageUrl = window.webContents.getURL();
+                
+                streamCapturedHeaders[url] = {
+                    referer: details.referrer || pageUrl,
+                    origin: new URL(pageUrl).origin
+                };
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('stream-detected', {
+                        url: url,
+                        proxyUrl: `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(url)}`
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (streamExtractionWindow) {
+                        console.log('[StreamExtractor] Closing extraction window');
+                        streamExtractionWindow.close();
+                        streamExtractionWindow = null;
+                    }
+                }, 1000);
+            }
+        }
+    });
+}
+
+function simulateStreamClick(window, targetUrl) {
+    if (!window || window.isDestroyed()) {
+        console.log('[StreamExtractor] Window is destroyed, cannot simulate click');
+        return;
+    }
+
+    const isVideasy = targetUrl.includes('videasy.net');
+    
+    const clickScript = `
+        try {
+            console.log('[StreamExtractor] Simulating single click...');
+            const isVideasy = ${isVideasy};
+            
+            const videos = document.querySelectorAll('video');
+            for (let i = 0; i < videos.length; i++) {
+                videos[i].muted = true;
+                videos[i].volume = 0;
+            }
+            
+            if (isVideasy) {
+                console.log('[StreamExtractor] Detected videasy.net - clicking specific play button');
+                
+                const buttons = document.querySelectorAll('button');
+                let clicked = false;
+                
+                for (let i = 0; i < buttons.length; i++) {
+                    const svg = buttons[i].querySelector('svg.play-icon-main');
+                    if (svg) {
+                        buttons[i].click();
+                        console.log('[StreamExtractor] Clicked button with play-icon-main SVG');
+                        clicked = true;
+                        break;
+                    }
+                }
+                
+                if (!clicked) {
+                    const playIcon = document.querySelector('svg.play-icon-main');
+                    if (playIcon) {
+                        playIcon.click();
+                        console.log('[StreamExtractor] Clicked play-icon-main SVG directly');
+                        clicked = true;
+                    }
+                }
+                
+                if (!clicked) {
+                    const playIcon = document.querySelector('svg.play-icon-main');
+                    if (playIcon && playIcon.parentElement) {
+                        playIcon.parentElement.click();
+                        console.log('[StreamExtractor] Clicked parent of play-icon-main');
+                        clicked = true;
+                    }
+                }
+                
+                if (!clicked) {
+                    const titleYear = document.querySelector('.title-year');
+                    if (titleYear) {
+                        const button = titleYear.querySelector('button');
+                        if (button) {
+                            button.click();
+                            console.log('[StreamExtractor] Clicked button in title-year container');
+                            clicked = true;
+                        }
+                    }
+                }
+                
+                if (!clicked) {
+                    console.log('[StreamExtractor] Could not find videasy play button');
+                }
+                
+            } else {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                
+                const centerElement = document.elementFromPoint(width / 2, height / 2);
+                if (centerElement) {
+                    centerElement.click();
+                    console.log('Clicked center element:', centerElement.tagName);
+                }
+                
+                const selectors = [
+                    'video',
+                    'iframe',
+                    'button',
+                    '.play',
+                    '.vjs-big-play-button',
+                    '[aria-label*="Play"]',
+                    '[aria-label*="play"]',
+                    '[class*="play"]',
+                    '[id*="play"]'
+                ];
+                
+                for (let s = 0; s < selectors.length; s++) {
+                    const elements = document.querySelectorAll(selectors[s]);
+                    for (let i = 0; i < elements.length; i++) {
+                        const el = elements[i];
+                        try {
+                            el.click();
+                            
+                            if (el.tagName === 'VIDEO') {
+                                el.muted = true;
+                                el.play().catch(function() {});
+                            }
+                            
+                            if (el.tagName === 'IFRAME') {
+                                try {
+                                    const iframeDoc = el.contentDocument || el.contentWindow.document;
+                                    if (iframeDoc) {
+                                        const iframeVideos = iframeDoc.querySelectorAll('video');
+                                        for (let j = 0; j < iframeVideos.length; j++) {
+                                            iframeVideos[j].muted = true;
+                                            iframeVideos[j].play().catch(function() {});
+                                        }
+                                        
+                                        const iframeButtons = iframeDoc.querySelectorAll('button, .play, .vjs-big-play-button');
+                                        for (let j = 0; j < iframeButtons.length; j++) {
+                                            iframeButtons[j].click();
+                                        }
+                                    }
+                                } catch(e) {
+                                    console.log('Cannot access iframe');
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+            
+            console.log('[StreamExtractor] Single click simulation complete');
+        } catch(err) {
+            console.error('Click script error:', err);
+        }
+    `;
+    
+    window.webContents.executeJavaScript(clickScript).catch(err => {
+        console.error('[StreamExtractor] Failed to execute click script:', err);
+    });
+}
+
+function createStreamExtractionWindow(targetUrl) {
+    if (streamExtractionWindow) {
+        streamExtractionWindow.close();
+    }
+
+    streamExtractionWindow = new BrowserWindow({
+        width: 1280,
+        height: 720,
+        show: false,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: false,
+            allowRunningInsecureContent: true
+        }
+    });
+
+    streamExtractionWindow.webContents.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    streamExtractionWindow.webContents.setAudioMuted(true);
+
+    setupStreamNetworkInterception(streamExtractionWindow);
+    
+    streamExtractionWindow.loadURL(targetUrl);
+
+    streamExtractionWindow.webContents.on('did-finish-load', () => {
+        console.log('[StreamExtractor] Page loaded, simulating single click...');
+        setTimeout(() => {
+            if (streamExtractionWindow && !streamExtractionWindow.isDestroyed()) {
+                simulateStreamClick(streamExtractionWindow, targetUrl);
+            } else {
+                console.log('[StreamExtractor] Window was closed before click could be simulated');
+            }
+        }, 2000);
+    });
+
+    streamExtractionWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        console.error('[StreamExtractor] Failed to load:', errorDescription);
+    });
+}
+
+// IPC handlers for stream extraction
+ipcMain.handle('extract-stream', (event, url) => {
+    console.log('[StreamExtractor] Starting new extraction, clearing old headers...');
+    Object.keys(streamCapturedHeaders).forEach(key => delete streamCapturedHeaders[key]);
+    
+    if (streamExtractionWindow) {
+        streamExtractionWindow.close();
+        streamExtractionWindow = null;
+    }
+    
+    createStreamExtractionWindow(url);
+    return { success: true };
+});
+
+ipcMain.handle('close-stream-extraction', () => {
+    if (streamExtractionWindow) {
+        streamExtractionWindow.close();
+        streamExtractionWindow = null;
+    }
+    return { success: true };
+});
+
+// Start stream proxy server on app ready
+startStreamProxyServer();
+
+// ===================================================
+// END STREAM EXTRACTOR
+// ===================================================
 
 // --- Graceful shutdown flags ---
 let isShuttingDown = false;

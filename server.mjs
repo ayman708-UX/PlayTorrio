@@ -1195,7 +1195,8 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
             discordActivity: s.discordActivity !== false,
             showSponsor: s.showSponsor !== false,
             torrentEngine: s.torrentEngine || 'stremio',
-            torrentEngineInstances: s.torrentEngineInstances || 1
+            torrentEngineInstances: s.torrentEngineInstances || 1,
+            streamingMode: s.streamingMode !== false // Default to true
         });
     });
     
@@ -1315,6 +1316,7 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
             showSponsor: req.body.showSponsor !== undefined ? !!req.body.showSponsor : (s.showSponsor !== false),
             torrentEngine: req.body.torrentEngine !== undefined ? req.body.torrentEngine : (s.torrentEngine || 'stremio'),
             torrentEngineInstances: req.body.torrentEngineInstances !== undefined ? parseInt(req.body.torrentEngineInstances, 10) : (s.torrentEngineInstances || 1),
+            streamingMode: req.body.streamingMode !== undefined ? !!req.body.streamingMode : (s.streamingMode !== false), // Default to true
         };
         const ok = writeSettings(next);
         

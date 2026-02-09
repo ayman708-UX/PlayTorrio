@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTorrio</title>
+    <link rel="stylesheet" href="css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/person.css">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="custom-titlebar" id="customTitlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon">▶</div>
+            <div class="titlebar-title">PlayTorrio</div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button minimize" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 12 12"><rect x="0" y="5" width="12" height="1" fill="currentColor"/></svg>
+            </button>
+            <button class="titlebar-button maximize" id="maximizeBtn" title="Maximize">
+                <svg viewBox="0 0 12 12">
+                    <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                    <line x1="2.5" y1="2.5" x2="11.5" y2="2.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="11.5" x2="2.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+            </button>
+            <button class="titlebar-button close" id="closeBtn" title="Close">
+                <svg viewBox="0 0 12 12"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="person-page" id="personPage">
+        <!-- Loading State -->
+        <div class="person-loading" id="personLoading">
+            <div class="spinner-large"></div>
+            <p>Loading actor details...</p>
+        </div>
+
+        <!-- Content Container -->
+        <div class="person-content" id="personContent" style="display: none;">
+            <!-- Back Button -->
+            <button class="back-to-browse" id="backBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Back
+            </button>
+
+            <!-- Hero Section -->
+            <div class="person-hero">
+                <div class="person-hero-gradient"></div>
+            </div>
+
+            <!-- Main Info Section -->
+            <div class="person-main">
+                <!-- Photo Gallery Section -->
+                <div class="person-photos-section">
+                    <div class="main-photo-container">
+                        <img id="mainPhoto" alt="Actor Photo" class="main-photo">
+                        <div class="photo-nav">
+                            <button class="photo-nav-btn prev" id="photoPrev">‹</button>
+                            <button class="photo-nav-btn next" id="photoNext">›</button>
+                        </div>
+                        <div class="photo-counter" id="photoCounter">1 / 1</div>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="person-info-section">
+                    <h1 class="person-name" id="personName"></h1>
+                    
+                    <div class="person-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Known For:</span>
+                            <span class="meta-value" id="knownFor"></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Birthday:</span>
+                            <span class="meta-value" id="birthday"></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Place of Birth:</span>
+                            <span class="meta-value" id="birthplace"></span>
+                        </div>
+                    </div>
+
+                    <div class="person-bio-section">
+                        <h3 class="bio-title">Biography</h3>
+                        <p class="person-bio" id="personBio"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filmography Section -->
+            <div class="person-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+                        </svg>
+                        Filmography
+                    </h2>
+                    <div class="filmography-filters">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="movie">Movies</button>
+                        <button class="filter-btn" data-filter="tv">TV Shows</button>
+                    </div>
+                </div>
+                <div class="filmography-grid" id="filmographyGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/titlebar.js"></script>
+    <script src="js/person.js"></script>
+</body>
+</html>

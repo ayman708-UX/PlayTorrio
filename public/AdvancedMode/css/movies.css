@@ -1,0 +1,752 @@
+/* Hero Section */
+.hero-section {
+    position: relative;
+    width: calc(100% - 30px);
+    margin: 20px 15px 0 0;
+    height: 85vh;
+    overflow: hidden;
+    border-radius: 30px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.hero-slider {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.hero-slide {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center top;
+    opacity: 0;
+    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-slide.active {
+    opacity: 1;
+}
+
+/* Cinematic Vignette Overlay */
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 70% 20%, transparent 0%, rgba(5, 5, 7, 0.3) 30%, rgba(5, 5, 7, 0.95) 90%),
+                linear-gradient(to top, #050507 0%, rgba(5, 5, 7, 0.5) 50%, transparent 100%);
+}
+
+.hero-content {
+    position: absolute;
+    left: 5%;
+    bottom: 15%;
+    max-width: 650px;
+    z-index: 2;
+    color: #fff;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s ease-out 0.3s;
+}
+
+.hero-slide.active .hero-content {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hero-title {
+    font-size: 4.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #fff;
+    line-height: 1.1;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    letter-spacing: -1px;
+}
+
+.hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.hero-rating {
+    color: #fbbf24; /* Amber for star */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.hero-year {
+    color: #e5e5e5;
+    background: rgba(255,255,255,0.1);
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.hero-overview {
+    font-size: 1.15rem;
+    line-height: 1.7;
+    margin-bottom: 35px;
+    color: #d4d4d8;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 90%;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 20px;
+}
+
+.hero-btn {
+    padding: 16px 45px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hero-btn.primary {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.hero-btn.primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+}
+
+.hero-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.hero-nav {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 40px;
+    transform: translateY(-50%);
+    z-index: 3;
+    pointer-events: none; /* Let clicks pass through if not on button */
+}
+
+.hero-nav-btn {
+    pointer-events: auto;
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-nav-btn:hover {
+    background: rgba(139, 92, 246, 0.8);
+    transform: scale(1.1);
+    border-color: transparent;
+}
+
+.hero-dots {
+    position: absolute;
+    bottom: 40px;
+    right: 5%; /* Moved to right */
+    left: auto;
+    transform: none;
+    display: flex;
+    gap: 12px;
+    z-index: 3;
+}
+
+.hero-dot {
+    width: 40px; /* Bars instead of dots */
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.hero-dot.active {
+    background: #8b5cf6;
+    width: 60px;
+}
+
+/* Content Wrapper */
+.content-wrapper {
+    position: relative;
+    z-index: 1;
+    overflow-x: hidden;
+    width: 100%;
+    margin-top: -50px; /* Overlap hero slightly */
+    padding-bottom: 80px;
+    background: linear-gradient(to bottom, transparent, #050507 100px);
+}
+
+.main-content {
+    min-height: 100vh;
+    padding-left: 110px; /* Increased sidebar space for floating navbar */
+    width: 100%;
+}
+
+/* Movie Categories */
+.movie-category {
+    margin-bottom: 50px;
+    position: relative;
+    padding: 0 5%;
+}
+
+.category-title {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.category-title::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 24px;
+    background: #8b5cf6;
+    border-radius: 3px;
+}
+
+.movie-slider {
+    display: flex;
+    gap: 25px;
+    overflow-x: auto;
+    padding: 20px 5px 60px 5px; /* Extra bottom padding for hover effects */
+    margin: -20px -5px -60px -5px; /* Negative margin to compensate */
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+
+.movie-slider::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+/* Movie Cards */
+.movie-card {
+    flex: 0 0 220px;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    border-radius: 12px;
+}
+
+/* Trending Slider - Larger Cards */
+#trendingSlider .movie-card {
+    flex: 0 0 320px; /* Wider cards for trending */
+}
+
+#trendingSlider .movie-poster {
+    height: 480px;
+}
+
+.movie-poster {
+    position: relative;
+    width: 100%;
+    height: 330px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #1a1a20;
+}
+
+.movie-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to top, rgba(10, 10, 15, 0.98) 10%, rgba(10, 10, 15, 0.6) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+}
+
+.movie-info {
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.movie-title {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.movie-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.movie-rating {
+    color: #fbbf24;
+}
+
+.movie-description {
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.1s;
+}
+
+.movie-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.movie-btn:hover {
+    background: #8b5cf6;
+    color: #fff;
+    border-color: #8b5cf6;
+}
+
+/* Hover Effects */
+.movie-card:hover {
+    transform: scale(1.05) translateY(-10px);
+    z-index: 50;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+}
+
+.movie-card:hover .movie-poster {
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+}
+
+.movie-card:hover .movie-poster img {
+    transform: scale(1.1);
+}
+
+.movie-card:hover .movie-overlay {
+    opacity: 1;
+}
+
+.movie-card:hover .movie-info {
+    transform: translateY(0);
+}
+
+.movie-card:hover .movie-description {
+    opacity: 1;
+}
+
+/* Slider Navigation Buttons (Hidden by default, shown on hover of category) */
+.slider-btn {
+    position: absolute;
+    top: 50%; /* Center vertically relative to category */
+    transform: translateY(-20%); /* Adjust based on padding */
+    width: 45px;
+    height: 45px;
+    background: rgba(10, 10, 15, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s ease;
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.movie-category:hover .slider-btn {
+    opacity: 1;
+}
+
+.slider-btn:hover {
+    background: #8b5cf6;
+    transform: translateY(-20%) scale(1.1);
+}
+
+.slider-btn.prev {
+    left: 10px;
+}
+
+.slider-btn.next {
+    right: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.8rem;
+    }
+    
+    .hero-content {
+        max-width: 90%;
+        bottom: 10%;
+    }
+    
+    .hero-overview {
+        font-size: 1rem;
+        -webkit-line-clamp: 2;
+    }
+    
+    .category-title {
+        font-size: 1.4rem;
+    }
+    
+    .movie-card {
+        flex: 0 0 160px;
+    }
+    
+    #trendingSlider .movie-card {
+        flex: 0 0 200px;
+    }
+    
+    #trendingSlider .movie-poster {
+        height: 300px;
+    }
+    
+    .movie-poster {
+        height: 240px;
+    }
+    
+    .slider-btn {
+        display: none !important;
+    }
+    
+    .main-content {
+        padding-left: 0; /* Navbar might be bottom or hidden in mobile */
+    }
+}
+
+/* Netflix Style Originals Section */
+.netflix-style {
+    margin: 120px 0;
+    position: relative;
+    z-index: 10;
+    /* Base background is the theme black */
+    background: #050507;
+    padding: 60px 0;
+    transition: all 0.6s ease;
+    overflow: hidden;
+}
+
+/* Layered Background for perfect fading */
+.netflix-style::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Radial glow in the center */
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.18) 0%, transparent 75%);
+    /* Linear fades for top and bottom */
+    mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 15%, 
+        black 85%, 
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 15%, 
+        black 85%, 
+        transparent 100%
+    );
+    pointer-events: none;
+    z-index: -1;
+    transition: background 0.6s ease;
+}
+
+.netflix-style:hover::after {
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.35) 0%, transparent 80%);
+}
+
+.netflix-style::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('https://www.transparenttextures.com/patterns/dark-matter.png'); 
+    opacity: 0.3;
+    pointer-events: none;
+    mask-image: radial-gradient(circle at center, black 0%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 80%);
+    z-index: -1;
+}
+
+.netflix-style .movie-slider {
+    padding: 100px 5%; 
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    overflow: visible; 
+    scrollbar-width: none;
+}
+
+.netflix-style .movie-card {
+    flex: 0 0 280px; 
+    height: 520px; 
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center center;
+    margin: 0 15px; 
+    border-radius: 15px;
+    background: #1a1a20; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    opacity: 1; 
+    overflow: hidden; /* Ensure poster stays inside rounded corners */
+}
+
+.netflix-style .movie-poster {
+    height: 100% !important; /* Force full height */
+    width: 100%;
+    border: none;
+}
+
+.netflix-style .movie-poster img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover; /* Fill the space perfectly */
+}
+
+/* Only dim the OTHER cards when one is specifically hovered, and much more subtly */
+.netflix-style .movie-card:hover ~ .movie-card,
+.netflix-style .movie-slider:has(.movie-card:hover) .movie-card:not(:hover) {
+    opacity: 0.85; /* Very subtle dimming */
+    filter: brightness(0.9);
+}
+
+.netflix-style .movie-card:hover {
+    transform: scale(1.3) translateY(-40px); /* Lift even higher */
+    z-index: 1000 !important; 
+    opacity: 1 !important;
+    filter: brightness(1.1) grayscale(0); /* Actually brighten the hovered card */
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9), 
+                0 0 50px rgba(139, 92, 246, 0.5);
+    border: 3px solid #8b5cf6;
+}
+
+/* The Push Effect */
+.netflix-style .movie-card:hover ~ .movie-card {
+    transform: translateX(80px);
+}
+
+.netflix-style .movie-card:has(~ .movie-card:hover) {
+    transform: translateX(-80px);
+}
+
+.netflix-style .movie-card .movie-overlay {
+    background: linear-gradient(to top, #050507 0%, rgba(5, 5, 7, 0.5) 40%, transparent 100%);
+    padding: 20px;
+}
+
+.netflix-style .movie-card .movie-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.netflix-style .movie-card .movie-description {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    -webkit-line-clamp: 3;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.2s;
+}
+
+.netflix-style .movie-card:hover .movie-description {
+    opacity: 1;
+}
+
+/* Hide scroll buttons for Originals since they are centered and fixed */
+.netflix-style .slider-btn {
+    display: none !important;
+}
+
+/* Responsive adjustments for the big expansion */
+@media (max-width: 768px) {
+    .netflix-style .movie-card:hover {
+        transform: scale(1.2); /* Smaller scale on mobile */
+    }
+    .netflix-style .movie-card:hover ~ .movie-card {
+        transform: translateX(20px);
+    }
+    .netflix-style .movie-card:has(~ .movie-card:hover) {
+        transform: translateX(-20px);
+    }
+}
+
+/* Spotlight Section */
+.spotlight-section {
+    margin: 100px 5%;
+    position: relative;
+    z-index: 1;
+}
+
+.spotlight-card {
+    display: flex;
+    background: linear-gradient(90deg, #1a1a20 0%, #131318 100%);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    min-height: 400px;
+}
+
+.spotlight-image {
+    flex: 1;
+    position: relative;
+    min-height: 100%;
+}
+
+.spotlight-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%); /* Fade out right side if you want, or just let it be */
+}
+
+/* Overlay to fade image into text area */
+.spotlight-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, #1a1a20);
+}
+
+.spotlight-content {
+    flex: 1;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+.spotlight-label {
+    color: #8b5cf6;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.spotlight-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.spotlight-desc {
+    font-size: 1.1rem;
+    color: #d4d4d8;
+    line-height: 1.7;
+    margin-bottom: 30px;
+    max-width: 90%;
+}
+
+.spotlight-actions {
+    display: flex;
+    gap: 15px;
+}
+
+@media (max-width: 960px) {
+    .spotlight-card {
+        flex-direction: column;
+    }
+    
+    .spotlight-image {
+        height: 250px;
+        flex: none;
+    }
+    
+    .spotlight-image::after {
+        width: 100%;
+        height: 50%;
+        top: auto;
+        bottom: 0;
+        background: linear-gradient(to bottom, transparent, #1a1a20);
+    }
+    
+    .spotlight-content {
+        padding: 30px;
+    }
+}

@@ -1,0 +1,419 @@
+/* Search Page Styles */
+.search-page {
+    min-height: 100vh;
+    padding-top: 20px;
+    position: relative;
+    z-index: 1;
+    background: #08080c;
+}
+
+/* 1. Header - Sticky Glass */
+.search-header {
+    position: sticky;
+    top: 0;
+    padding: 30px 5% 40px;
+    background: rgba(8, 8, 12, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+/* 2. Premium Search Bar */
+.search-bar-container {
+    max-width: 1000px;
+    margin: 0 auto 35px;
+    position: relative;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    padding: 20px 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: #fff;
+    font-size: 1.2rem;
+    font-family: 'Poppins', sans-serif;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.search-input:focus {
+    border-color: #8b5cf6;
+    background: rgba(20, 10, 30, 0.6);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+    transform: translateY(-2px);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.search-btn {
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border: none;
+    border-radius: 20px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+}
+
+.search-btn svg {
+    width: 28px;
+    height: 28px;
+}
+
+.search-btn:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 15px 35px rgba(139, 92, 246, 0.5);
+}
+
+/* 3. Filter Bar - Sleek Pills */
+.filter-bar {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center; /* Center filters */
+}
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-dropdown-btn {
+    padding: 10px 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    color: #e5e5e5;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.filter-dropdown-btn:hover, .filter-dropdown-btn.active {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: #8b5cf6;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.filter-dropdown-btn svg {
+    width: 18px;
+    height: 18px;
+    color: #8b5cf6;
+}
+
+.filter-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 15px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: rgba(20, 20, 25, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 16px;
+    padding: 15px;
+    min-width: 280px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.filter-dropdown-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    color: #d4d4d8;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.filter-option:hover {
+    background: rgba(139, 92, 246, 0.2);
+    color: #fff;
+    padding-left: 20px; /* Slide effect */
+}
+
+.filter-option input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #8b5cf6;
+}
+
+/* Specific Menus */
+.genre-menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    min-width: 400px;
+}
+
+.year-menu {
+    min-width: 300px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+}
+
+.clear-filters-btn {
+    padding: 10px 24px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 30px;
+    color: #ef4444;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+}
+
+.clear-filters-btn:hover {
+    background: #ef4444;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+}
+
+/* 4. Search Results - Immersive Grid */
+.search-results {
+    padding: 40px 5%;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.results-title {
+    font-size: 2.2rem;
+    color: #fff;
+    font-weight: 700;
+    background: linear-gradient(to right, #fff, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.results-count {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 15px;
+    border-radius: 20px;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 30px;
+}
+
+/* Card Style Matching Main App */
+.search-result-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.search-result-card:hover {
+    transform: translateY(-12px) scale(1.02);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+    z-index: 10;
+}
+
+.search-card-poster {
+    position: relative;
+    width: 100%;
+    height: 330px;
+    overflow: hidden;
+}
+
+.search-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+}
+
+.search-result-card:hover .search-card-poster img {
+    transform: scale(1.1);
+}
+
+/* Gradient Overlay instead of solid black */
+.search-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(139, 92, 246, 0.9) 0%, rgba(0, 0, 0, 0.4) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.search-result-card:hover .search-card-overlay {
+    opacity: 1;
+}
+
+.search-card-btn {
+    padding: 12px 25px;
+    background: #fff;
+    color: #8b5cf6;
+    border: none;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.search-result-card:hover .search-card-btn {
+    transform: translateY(0);
+}
+
+.search-card-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.search-card-info {
+    padding: 18px;
+}
+
+.search-card-title {
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 12px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.search-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.search-card-rating {
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.search-card-type {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+/* 5. Clean Empty States */
+.search-placeholder,
+.no-results,
+.loading,
+.error {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px;
+    text-align: center;
+}
+
+.search-placeholder svg,
+.no-results svg {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 30px;
+    color: rgba(139, 92, 246, 0.2);
+    filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.1));
+}
+
+.search-placeholder p,
+.no-results p {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 500;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.loading {
+    padding: 150px 0;
+}
+
+/* Spinner styling is likely global or can be added here if needed */
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-header { padding: 20px 5%; }
+    .search-input { padding: 15px 20px; font-size: 1rem; }
+    .search-btn { width: 55px; height: 55px; }
+    .results-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+    .search-card-poster { height: 240px; }
+    .filter-bar { justify-content: flex-start; overflow-x: auto; padding-bottom: 10px; flex-wrap: nowrap; }
+    .filter-dropdown-menu { left: 0; transform: translateY(-10px); min-width: 250px; }
+    .filter-dropdown-menu.active { transform: translateY(0); }
+}

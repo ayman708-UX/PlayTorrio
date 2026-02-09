@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTorrio</title>
+    <link rel="stylesheet" href="css/titlebar.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Override with completely different design */
+        body {
+            background: linear-gradient(135deg, #0a0118 0%, #1a0a2e 50%, #16213e 100%) !important;
+            background-attachment: fixed;
+        }
+        
+        .bg-bg-dark {
+            background: transparent !important;
+        }
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0a0118, #1a0a2e, #16213e, #0f3460);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -1;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Glass cards with neon borders */
+        .glass-card {
+            background: rgba(26, 10, 46, 0.6) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 2px solid rgba(139, 92, 246, 0.4) !important;
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.2), inset 0 0 20px rgba(139, 92, 246, 0.05) !important;
+        }
+        
+        /* Provider tabs with glow */
+        #addon-tabs button {
+            background: rgba(139, 92, 246, 0.15) !important;
+            border: 2px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 16px !important;
+            transition: all 0.3s !important;
+        }
+        
+        #addon-tabs button:hover {
+            background: rgba(139, 92, 246, 0.3) !important;
+            border-color: rgba(139, 92, 246, 0.6) !important;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        #addon-tabs button.bg-purple-600 {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+            border-color: #8b5cf6 !important;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6) !important;
+        }
+        
+        /* Source cards with holographic effect */
+        .source-card {
+            background: linear-gradient(135deg, rgba(26, 10, 46, 0.8), rgba(22, 33, 62, 0.6)) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 20px !important;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) !important;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .source-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.15) 50%, transparent 70%);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+            pointer-events: none;
+        }
+        
+        .source-card:hover {
+            transform: translateX(8px) scale(1.02) !important;
+            border-color: rgba(139, 92, 246, 0.6) !important;
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3) !important;
+        }
+        
+        .source-card:hover::after {
+            right: 150%;
+        }
+        
+        /* Quality badges with glow */
+        .res-badge {
+            box-shadow: 0 0 20px currentColor !important;
+            font-weight: 800 !important;
+            letter-spacing: 1px !important;
+        }
+        
+        /* Buttons with neon effect */
+        .play-btn, .copy-btn {
+            transition: all 0.3s !important;
+            border-radius: 12px !important;
+        }
+        
+        .play-btn:hover {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.8) !important;
+            transform: scale(1.05) !important;
+        }
+        
+        .copy-btn:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+        }
+        
+        /* Episode cards */
+        .episode-btn {
+            background: rgba(139, 92, 246, 0.1) !important;
+            border: 2px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 16px !important;
+            transition: all 0.3s !important;
+        }
+        
+        .episode-btn:hover {
+            background: rgba(139, 92, 246, 0.2) !important;
+            border-color: rgba(139, 92, 246, 0.6) !important;
+            transform: translateY(-4px) !important;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4) !important;
+        }
+        
+        .episode-btn.ring-2 {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+            border-color: #8b5cf6 !important;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6) !important;
+        }
+        
+        /* Season buttons */
+        .season-btn {
+            background: rgba(139, 92, 246, 0.1) !important;
+            border: 2px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 12px !important;
+        }
+        
+        .season-btn.bg-purple-600 {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 1, 24, 0.4);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+        }
+        
+        /* Loading spinner */
+        .animate-spin {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6) !important;
+        }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary-purple': '#7c3aed',
+              'primary-blue': '#3b82f6',
+              'bg-dark': '#0a0a0f',
+              'bg-card': '#14141f',
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-bg-dark text-white edge-glow min-h-screen pt-12">
+    <!-- Custom Title Bar -->
+    <div class="custom-titlebar" id="customTitlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon">▶</div>
+            <div class="titlebar-title">PlayTorrio</div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button minimize" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 12 12"><rect x="0" y="5" width="12" height="1" fill="currentColor"/></svg>
+            </button>
+            <button class="titlebar-button maximize" id="maximizeBtn" title="Maximize">
+                <svg viewBox="0 0 12 12">
+                    <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                    <line x1="2.5" y1="2.5" x2="11.5" y2="2.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="11.5" x2="2.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+            </button>
+            <button class="titlebar-button close" id="closeBtn" title="Close">
+                <svg viewBox="0 0 12 12"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="js/titlebar.js"></script>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-bg-dark transition-opacity duration-300">
+        <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Play Loading Overlay (fullscreen black when starting playback) -->
+    <div id="play-loading-overlay" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black hidden">
+        <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
+        <p id="play-loading-text" class="text-white/70 text-lg">Preparing stream...</p>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="fixed inset-0 z-0">
+        <div id="backdrop-image" class="absolute inset-0 bg-cover bg-center transition-opacity duration-700 opacity-0"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-black via-black/95 to-black/70"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-[#0a0a0f]/50"></div>
+        <div class="absolute inset-0 backdrop-blur-sm"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="relative z-10">
+        <!-- Back Button -->
+        <a href="index.html" class="fixed top-12 left-6 z-50 w-12 h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-purple-600 transition-colors group">
+             <svg class="w-6 h-6 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 p-4">
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col shadow-2xl transform scale-95 transition-transform duration-300" id="settings-content">
+                <!-- Header - Fixed -->
+                <div class="p-4 sm:p-6 border-b border-gray-800 flex-shrink-0">
+                    <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                    </h2>
+                </div>
+                
+                <!-- Scrollable Content -->
+                <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
+                    <div>
+                        <label class="block text-gray-400 text-xs sm:text-sm font-medium mb-2">Jackett API Key</label>
+                        <input type="password" id="jackett-api-input" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-primary-purple focus:ring-1 focus:ring-primary-purple transition-all" placeholder="Enter your Jackett API key">
+                        <p class="text-gray-500 text-[10px] sm:text-xs mt-1.5">Required for fetching sources via Jackett.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-400 text-xs sm:text-sm font-medium mb-2">Jackett Base URL</label>
+                        <input type="text" id="jackett-url-input" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-primary-purple focus:ring-1 focus:ring-primary-purple transition-all" placeholder="http://127.0.0.1:9117/...">
+                        <p class="text-gray-500 text-[10px] sm:text-xs mt-1.5 break-all">Default: http://127.0.0.1:9117/api/v2.0/indexers/all/results/torznab</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-400 text-xs sm:text-sm font-medium mb-2">Stremio Addons</label>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="addon-manifest-input" class="flex-1 min-w-0 bg-black/50 border border-gray-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-primary-purple transition-all" placeholder="https://addon.com/manifest.json">
+                            <button id="install-addon-btn" class="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors flex-shrink-0">Install</button>
+                        </div>
+                        <div id="installed-addons-list" class="space-y-2 max-h-32 sm:max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                            <!-- Addons go here -->
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-400 text-xs sm:text-sm font-medium mb-2">Default Sorting</label>
+                        <select id="default-sort-input" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-primary-purple focus:ring-1 focus:ring-primary-purple transition-all cursor-pointer">
+                            <option value="seeders">Seeders (High to Low)</option>
+                            <option value="size-desc">Size (Large to Small)</option>
+                            <option value="size-asc">Size (Small to Large)</option>
+                            <option value="quality">Quality (4K First)</option>
+                        </select>
+                        <p class="text-gray-500 text-[10px] sm:text-xs mt-1.5">Preferred sorting method for sources.</p>
+                    </div>
+
+                    <!-- Debrid Configuration -->
+                    <div class="pt-4 border-t border-gray-800">
+                        <h3 class="text-white font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Debrid Settings
+                        </h3>
+                        
+                        <div class="mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="use-debrid-toggle" class="form-checkbox bg-gray-800 border-gray-700 text-purple-600 rounded focus:ring-purple-500 transition-colors">
+                                <span class="text-gray-300 text-xs sm:text-sm">Use Debrid for streams</span>
+                            </label>
+                        </div>
+
+                        <div id="debrid-config-container" class="space-y-3 sm:space-y-4 opacity-50 pointer-events-none transition-opacity duration-300">
+                            <div>
+                                <label class="block text-gray-400 text-[10px] sm:text-xs font-medium mb-1">Provider</label>
+                                <select id="debrid-provider-select" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-primary-purple transition-all">
+                                    <option value="realdebrid">Real-Debrid</option>
+                                    <option value="alldebrid">AllDebrid</option>
+                                    <option value="torbox">TorBox</option>
+                                    <option value="premiumize">Premiumize</option>
+                                </select>
+                            </div>
+
+                            <div id="rd-auth-section">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                    <span id="rd-status" class="text-[10px] sm:text-xs text-red-400">Not logged in</span>
+                                    <button id="rd-login-btn" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-[10px] sm:text-xs font-bold rounded transition-colors w-full sm:w-auto">
+                                        Login with Real-Debrid
+                                    </button>
+                                </div>
+                                <p class="text-gray-500 text-[9px] sm:text-[10px]">No password needed. Authenticate via device code.</p>
+                            </div>
+
+                            <div id="api-key-section" class="hidden">
+                                <label class="block text-gray-400 text-[10px] sm:text-xs font-medium mb-1">API Key</label>
+                                <input type="password" id="debrid-api-input" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-primary-purple transition-all" placeholder="Enter API Key">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer - Fixed -->
+                <div class="p-4 sm:p-6 border-t border-gray-800 flex-shrink-0 flex flex-wrap justify-end gap-2 sm:gap-3">
+                    <button id="toggle-console-btn" class="px-3 sm:px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-xs sm:text-sm">Toggle Console</button>
+                    <button id="close-settings" class="px-3 sm:px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm">Cancel</button>
+                    <button id="save-settings" class="px-4 sm:px-6 py-2 rounded-lg bg-primary-purple text-white font-medium hover:bg-purple-600 shadow-lg shadow-purple-500/25 transition-all text-sm">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-container" class="flex flex-col lg:flex-row min-h-screen hidden opacity-0 transition-opacity duration-500">
+             <!-- LEFT PANEL - Details -->
+             <div class="lg:w-1/2 xl:w-2/5 p-6 lg:p-12 pt-20 lg:pt-12">
+                <div class="flex flex-col md:flex-row lg:flex-col xl:flex-row gap-6 mb-8">
+                     <!-- Poster -->
+                     <div class="flex-shrink-0 w-48 md:w-56 mx-auto md:mx-0 transition-all duration-700 transform translate-y-4 opacity-0" id="poster-anim-target">
+                        <div class="aspect-[2/3] rounded-2xl overflow-hidden poster-shadow glow-purple">
+                            <img id="detail-poster" src="" alt="" class="w-full h-full object-cover">
+                        </div>
+                     </div>
+
+                     <!-- Info -->
+                     <div class="flex-1 text-center md:text-left lg:text-center xl:text-left transition-all duration-700 delay-100 transform translate-y-4 opacity-0" id="info-anim-target">
+                        <h1 id="detail-title" class="text-3xl md:text-4xl font-bold text-white mb-3"></h1>
+                        
+                        <div class="flex flex-wrap items-center justify-center md:justify-start lg:justify-center xl:justify-start gap-3 mb-4 text-sm">
+                            <span id="detail-year" class="text-gray-400"></span>
+                            <span class="text-gray-600 separator hidden">•</span>
+                            <span id="detail-runtime" class="text-gray-400"></span>
+                            <span class="text-gray-600">•</span>
+                            <span class="flex items-center gap-1 text-yellow-400">
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                                </svg>
+                                <span id="detail-rating"></span>
+                            </span>
+                        </div>
+
+                        <div id="detail-genres" class="flex flex-wrap gap-2 mb-4 justify-center md:justify-start lg:justify-center xl:justify-start"></div>
+                        
+                        <p id="detail-director-container" class="text-gray-400 text-sm mb-2 hidden">
+                            <span class="text-gray-500">Directed by</span> <span id="detail-director" class="text-white"></span>
+                        </p>
+                     </div>
+                </div>
+
+                <p id="detail-overview" class="text-gray-300 leading-relaxed mb-6 transition-all duration-700 delay-200 transform translate-y-4 opacity-0"></p>
+
+                <div id="cast-container" class="transition-all duration-700 delay-300 transform translate-y-4 opacity-0 mb-8">
+                    <h3 class="text-white font-semibold mb-3">Cast</h3>
+                    <div id="detail-cast" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Media Gallery (Screenshots/Trailer) -->
+                <div id="media-container" class="transition-all duration-700 delay-400 transform translate-y-4 opacity-0 hidden">
+                    <!-- Toggle Buttons -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <button id="screenshots-tab" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-purple-600 text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Screenshots
+                        </button>
+                        <button id="trailer-tab" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Trailer
+                        </button>
+                    </div>
+                    
+                    <!-- Screenshots Grid -->
+                    <div id="screenshots-section">
+                        <div id="screenshots-grid" class="grid grid-cols-2 gap-3">
+                            <!-- Screenshots injected here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Trailer Section -->
+                    <div id="trailer-section" class="hidden">
+                        <div id="trailer-container" class="aspect-video rounded-lg overflow-hidden bg-gray-900 border border-gray-800">
+                            <!-- Trailer iframe injected here -->
+                            <div id="trailer-placeholder" class="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                                <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p class="text-sm">No trailer available</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+
+             <!-- RIGHT PANEL - Sources/Episodes -->
+             <div class="lg:w-1/2 xl:w-3/5 p-4 sm:p-6 lg:p-12 lg:pt-12 bg-gradient-to-l from-black/50 to-transparent transition-all duration-700 delay-100 transform translate-x-4 opacity-0 flex flex-col min-h-[50vh] lg:min-h-screen overflow-y-auto overflow-x-hidden" id="right-panel-anim-target">
+                
+                <!-- Season Selector (TV Only) -->
+                <div id="season-section" class="mb-6 flex-shrink-0 hidden">
+                    <h3 class="text-white font-semibold mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        Seasons
+                    </h3>
+                    <div id="season-list" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Episode Grid (TV Only) -->
+                <div id="episode-section" class="mb-6 flex-shrink-0 hidden">
+                    <h3 class="text-white font-semibold mb-3 flex items-center gap-2">
+                         <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span id="episodes-title">Episodes</span>
+                    </h3>
+                    <div id="episode-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[180px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar"></div>
+                </div>
+
+                <!-- Sources List -->
+                <div id="sources-section" class="flex flex-col flex-1 min-h-0">
+                    <!-- Torrent Sources Section -->
+                    <div id="torrent-sources-section">
+                        <div id="addon-tabs" class="flex flex-wrap gap-2 mb-4 border-b border-gray-800 pb-2">
+                            <!-- Addon tabs will be injected here -->
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 flex-shrink-0">
+                            <h3 class="text-white font-semibold flex items-center gap-2 text-sm sm:text-base">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span id="sources-title">Available Sources</span>
+                            </h3>
+
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <select id="sort-select" class="bg-gray-800 border border-gray-700 text-gray-300 text-[10px] sm:text-xs rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1 sm:p-1.5 transition-colors cursor-pointer outline-none flex-1 sm:flex-none min-w-0">
+                                    <option value="seeders">Seeders (High to Low)</option>
+                                    <option value="size-desc">Size (Large to Small)</option>
+                                    <option value="size-asc">Size (Small to Large)</option>
+                                    <option value="quality">Quality (4K First)</option>
+                                </select>
+
+                                <select id="quality-filter" class="bg-gray-800 border border-gray-700 text-gray-300 text-[10px] sm:text-xs rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1 sm:p-1.5 transition-colors cursor-pointer outline-none flex-1 sm:flex-none min-w-0">
+                                    <option value="all">All Qualities</option>
+                                    <option value="4K">4K Only</option>
+                                    <option value="1080p">1080p Only</option>
+                                    <option value="720p">720p Only</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="sources-list" class="space-y-2 sm:space-y-3 flex-1 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 custom-scrollbar pb-6">
+                            <!-- Sources injected here -->
+                        </div>
+
+                        <div id="select-episode-msg" class="flex flex-col items-center justify-center py-16 text-center hidden">
+                            <div class="w-20 h-20 bg-purple-600/20 rounded-full flex items-center justify-center mb-4">
+                                <svg class="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <p class="text-gray-400 text-lg">Select an episode to view sources</p>
+                        </div>
+                    </div>
+                </div>
+
+             </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="addon-item-template">
+        <div class="flex items-center justify-between p-2 bg-black/30 rounded-lg border border-gray-800">
+            <div class="flex items-center gap-2 overflow-hidden">
+                <img class="addon-logo w-6 h-6 rounded flex-shrink-0 object-contain bg-gray-900" src="" alt="">
+                <span class="addon-name text-xs text-gray-200 truncate"></span>
+            </div>
+            <button class="remove-addon-btn p-1.5 text-gray-500 hover:text-red-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+        </div>
+    </template>
+
+    <template id="season-btn-template">
+        <button class="season-btn px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-gray-800/80 text-gray-300 hover:bg-gray-700 hover:text-white"></button>
+    </template>
+
+    <template id="episode-card-template">
+        <button class="episode-btn group relative aspect-video rounded-lg overflow-hidden transition-all duration-300 hover:ring-2 hover:ring-purple-500/50 text-left w-full">
+            <div class="absolute inset-0 bg-gray-800">
+                <img class="episode-img w-full h-full object-cover hidden">
+                <div class="episode-placeholder w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                    <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </div>
+            </div>
+            <div class="episode-overlay absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-70 group-hover:opacity-100 transition-opacity"></div>
+            <div class="episode-number absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-black/60 text-white"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-2">
+                <p class="episode-name text-white text-xs font-medium line-clamp-1"></p>
+            </div>
+        </button>
+    </template>
+
+    <template id="source-card-template">
+        <div class="source-card bg-gray-900/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-gray-800 hover:border-purple-500/50 transition-all duration-300 group opacity-0 translate-x-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
+                        <span class="res-badge text-white text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-bold"></span>
+                        <span class="codec-badge bg-gray-800 text-gray-300 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"></span>
+                        <span class="hdr-badge hidden text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium"></span>
+                    </div>
+                    <p class="release-name text-gray-400 text-xs sm:text-sm truncate mb-2"></p>
+                    <div class="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-500 flex-wrap">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3 sm:w-4 sm:h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="seeders-count text-green-400 font-medium"></span> seeders
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z" />
+                            </svg>
+                            <span class="file-size"></span>
+                        </span>
+                        <span class="provider-name text-purple-400"></span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                    <button class="copy-btn w-9 h-9 sm:w-10 sm:h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300 border border-white/10 group/copy" title="Copy Link">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-active/copy:scale-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                    </button>
+                    <button class="play-btn w-10 h-10 sm:w-12 sm:h-12 bg-white/5 hover:bg-primary-purple rounded-full flex items-center justify-center text-white transition-all duration-300 border border-white/10 hover:border-primary-purple group/play shadow-xl">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover/play:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md hidden opacity-0 transition-all duration-300 p-4 md:p-10">
+        <button id="close-image-modal" class="absolute top-6 right-6 z-[110] w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <div class="relative w-full h-full flex items-center justify-center">
+            <img id="modal-image" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transform scale-95 transition-transform duration-300">
+        </div>
+    </div>
+
+    <!-- Embedded Player Overlay (iframe) -->
+    <div id="player-overlay" class="fixed inset-0 z-[10000] bg-black hidden" style="pointer-events: none;">
+        <iframe id="player-iframe" class="w-full h-full border-0" allowfullscreen style="pointer-events: auto;" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-presentation"></iframe>
+    </div>
+
+    <script>
+        // Player overlay management
+        window.playerOverlay = {
+            overlay: null,
+            iframe: null,
+            currentStreamHash: null,
+            isAltEngine: false,
+            isClosing: false,
+            
+            init() {
+                this.overlay = document.getElementById('player-overlay');
+                this.iframe = document.getElementById('player-iframe');
+                
+                // Prevent clicks on overlay from propagating
+                if (this.overlay) {
+                    this.overlay.addEventListener('click', (e) => {
+                        // Only close if clicking directly on overlay, not iframe
+                        if (e.target === this.overlay) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.close();
+                        }
+                    });
+                }
+                
+                // ESC key to close
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !this.overlay.classList.contains('hidden')) {
+                        e.preventDefault();
+                        this.close();
+                    }
+                });
+                
+                // Listen for messages from the player iframe
+                window.addEventListener('message', (event) => {
+                    if (event.data?.type === 'player-close') {
+                        console.log('[PlayerOverlay] Received close message from iframe');
+                        this.close();
+                    } else if (event.data?.type === 'player-cleanup') {
+                        // Player requests cleanup of specific hash
+                        if (event.data.hash) {
+                            this.currentStreamHash = event.data.hash;
+                            this.isAltEngine = event.data.isAltEngine || false;
+                        }
+                    }
+                });
+                
+                // Handle iframe load errors
+                if (this.iframe) {
+                    this.iframe.addEventListener('error', () => {
+                        console.error('[PlayerOverlay] Iframe load error');
+                        this.close();
+                    });
+                }
+            },
+            
+            open(playerUrl, streamHash, isAltEngine = false) {
+                if (!this.overlay || !this.iframe) this.init();
+                
+                this.isClosing = false;
+                this.currentStreamHash = streamHash || null;
+                this.isAltEngine = isAltEngine;
+                
+                console.log('[PlayerOverlay] Opening player:', playerUrl);
+                console.log('[PlayerOverlay] Stream hash:', streamHash);
+                
+                // Clear any previous content
+                this.iframe.src = 'about:blank';
+                
+                // Reset all styles and show overlay
+                if (this.overlay) {
+                    // Clear any conflicting inline styles first
+                    this.overlay.style.pointerEvents = '';
+                    this.overlay.style.visibility = '';
+                    this.overlay.style.display = '';
+                    
+                    // Now show the overlay
+                    this.overlay.classList.remove('hidden');
+                    this.overlay.style.pointerEvents = 'auto';
+                }
+                
+                document.body.style.overflow = 'hidden';
+                
+                // Small delay to ensure clean state
+                setTimeout(() => {
+                    if (!this.isClosing && this.iframe) {
+                        this.iframe.src = playerUrl;
+                    }
+                }, 50);
+            },
+            
+            close() {
+                if (!this.overlay || this.isClosing) {
+                    console.log('[PlayerOverlay] Already closing or no overlay');
+                    return;
+                }
+                
+                this.isClosing = true;
+                console.log('[PlayerOverlay] Closing player...');
+                console.log('[PlayerOverlay] Current stream hash:', this.currentStreamHash);
+                
+                // Cleanup stream if we have a hash (local torrent stream)
+                if (this.currentStreamHash) {
+                    const endpoint = this.isAltEngine ? '/api/alt-stop-stream' : '/api/stop-stream';
+                    const url = `http://localhost:6987${endpoint}?hash=${this.currentStreamHash}`;
+                    console.log('[PlayerOverlay] Stopping stream at:', url);
+                    
+                    fetch(url)
+                        .then(res => {
+                            console.log('[PlayerOverlay] Stream stop response:', res.status);
+                            return res.text();
+                        })
+                        .then(text => console.log('[PlayerOverlay] Stream stopped:', text))
+                        .catch(e => console.warn('[PlayerOverlay] Stream stop error:', e));
+                    
+                    this.currentStreamHash = null;
+                    this.isAltEngine = false;
+                }
+                
+                // Hide the overlay properly
+                if (this.overlay) {
+                    this.overlay.classList.add('hidden');
+                    // Reset all inline styles to avoid conflicts
+                    this.overlay.style.pointerEvents = '';
+                    this.overlay.style.visibility = '';
+                    this.overlay.style.display = '';
+                }
+                
+                // Restore body
+                document.body.style.overflow = '';
+                document.body.style.pointerEvents = '';
+                
+                // Clear iframe after a delay
+                setTimeout(() => {
+                    if (this.iframe) {
+                        this.iframe.src = 'about:blank';
+                    }
+                    
+                    this.isClosing = false;
+                    console.log('[PlayerOverlay] Player fully closed and cleaned up');
+                }, 150);
+            }
+        };
+        
+        // Prevent any accidental navigation
+        window.addEventListener('beforeunload', (e) => {
+            if (window.playerOverlay && !window.playerOverlay.overlay.classList.contains('hidden')) {
+                console.log('[PlayerOverlay] Preventing navigation while player is open');
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+        
+        // Initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => window.playerOverlay.init());
+        } else {
+            window.playerOverlay.init();
+        }
+    </script>
+
+    <script type="module" src="js/play.js"></script>
+</body>
+</html>

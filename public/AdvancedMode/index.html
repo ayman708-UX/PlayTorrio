@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTorrio</title>
+    <link rel="stylesheet" href="css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/intro.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/movies.css">
+    <link rel="stylesheet" href="css/search.css">
+    <link rel="stylesheet" href="css/genres.css">
+    <link rel="stylesheet" href="css/comics.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/downloader.css">
+    <link rel="stylesheet" href="css/details.css">
+    <link rel="stylesheet" href="css/music.css">
+    <link rel="stylesheet" href="css/audiobooks.css">
+    <link rel="stylesheet" href="css/books.css">
+    <link rel="stylesheet" href="../css/readers.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Righteous&family=Audiowide&display=swap" rel="stylesheet">
+    <script>
+        // Check if intro should be skipped before anything renders
+        if (sessionStorage.getItem('skipIntro') === 'true') {
+            document.documentElement.classList.add('skip-intro');
+            // We'll let script.js handle the removal to be safe, 
+            // but adding the class here prevents the flicker.
+        }
+    </script>
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="custom-titlebar" id="customTitlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon">▶</div>
+            <div class="titlebar-title">PlayTorrio</div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button minimize" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 12 12"><rect x="0" y="5" width="12" height="1"/></svg>
+            </button>
+            <button class="titlebar-button maximize" id="maximizeBtn" title="Maximize">
+                <svg viewBox="0 0 12 12">
+                    <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                    <line x1="2.5" y1="2.5" x2="11.5" y2="2.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="11.5" x2="2.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+            </button>
+            <button class="titlebar-button close" id="closeBtn" title="Close">
+                <svg viewBox="0 0 12 12"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="intro-container" id="introContainer">
+        <audio id="introMusic" src="music/intro.m4a" preload="auto"></audio>
+        <div class="background-animation">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="gradient-orb orb-3"></div>
+        </div>
+        
+        <div class="logo-container">
+            <div class="play-icon">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="30,20 30,80 80,50" class="play-triangle"/>
+                </svg>
+            </div>
+            <h1 class="brand-name">
+                <span class="letter">P</span>
+                <span class="letter">l</span>
+                <span class="letter">a</span>
+                <span class="letter">y</span>
+                <span class="letter">T</span>
+                <span class="letter">o</span>
+                <span class="letter">r</span>
+                <span class="letter">r</span>
+                <span class="letter">i</span>
+                <span class="letter">o</span>
+            </h1>
+            <p class="tagline">Your Cinema Universe</p>
+        </div>
+        
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Ambient Background -->
+    <div class="ambient-background">
+        <div class="ambient-orb orb-a"></div>
+        <div class="ambient-orb orb-b"></div>
+    </div>
+
+    <div class="main-content" id="mainContent" style="display: block; min-height: 100vh;">
+        <!-- Left Navbar -->
+        <nav class="navbar" id="navbar">
+            <div class="navbar-brand">
+                <div class="brand-icon">▶</div>
+                <span class="brand-name-nav">PlayTorrio</span>
+            </div>
+            <ul class="navbar-menu" id="navbarMenu">
+                <li class="nav-item" data-id="home">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        </span>
+                        <span class="nav-label">Home</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="search">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        </span>
+                        <span class="nav-label">Search</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="genres">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+                        </span>
+                        <span class="nav-label">Genres</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="live-tv">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/></svg>
+                        </span>
+                        <span class="nav-label">Live TV</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="books">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+                        </span>
+                        <span class="nav-label">Books</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="audiobooks">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7zm-1.5 16c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        </span>
+                        <span class="nav-label">AudioBooks</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="comics">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 5v6.59l-3-3.01-4 4.01-4-4-4 4-3-3.01V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2zm-3 6.42l3 3.01V19c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-6.58l3 2.99 4-4 4 4 4-3.99z"/></svg>
+                        </span>
+                        <span class="nav-label">Comics</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="manga">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
+                        </span>
+                        <span class="nav-label">Manga</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="music">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </span>
+                        <span class="nav-label">Music</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="media-downloader">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/></svg>
+                        </span>
+                        <span class="nav-label">Media Downloader</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="games-downloader">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.58 16.09l-1.09-7.66C20.21 6.46 18.52 5 16.53 5H7.47C5.48 5 3.79 6.46 3.51 8.43l-1.09 7.66C2.2 17.63 3.39 19 4.94 19c.68 0 1.32-.27 1.8-.75L9 16h6l2.25 2.25c.48.48 1.13.75 1.8.75 1.56 0 2.75-1.37 2.53-2.91zM11 11H9v2H8v-2H6v-1h2V8h1v2h2v1zm4-1c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>
+                        </span>
+                        <span class="nav-label">Games Downloader</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="clear-cache">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </span>
+                        <span class="nav-label">Clear Cache</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="refresh">
+                    <button class="nav-btn" id="refreshBtn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        </span>
+                        <span class="nav-label">Refresh</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-id="settings">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        </span>
+                        <span class="nav-label">Settings</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Context Menu -->
+        <div class="context-menu" id="contextMenu">
+            <div class="context-menu-header">Navbar Items</div>
+            <ul class="context-menu-list" id="contextMenuList"></ul>
+        </div>
+
+        <div class="hero-section" id="heroSection">
+            <div class="hero-slider" id="heroSlider"></div>
+            <div class="hero-nav">
+                <button class="hero-nav-btn prev" id="heroPrev">‹</button>
+                <button class="hero-nav-btn next" id="heroNext">›</button>
+            </div>
+            <div class="hero-dots" id="heroDots"></div>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Continue Watching Section -->
+            <section id="continue-watching-section" class="movie-category" style="display: none;">
+                <h2 class="category-title">Continue Watching</h2>
+                <div id="continue-watching-grid"></div>
+            </section>
+            
+            <section class="movie-category">
+                <h2 class="category-title">Trending Now</h2>
+                <div class="movie-slider" id="trendingSlider"></div>
+            </section>
+
+            <!-- New Spotlight Section -->
+            <section id="spotlightSection" class="spotlight-section"></section>
+
+            <section class="movie-category netflix-style">
+                <h2 class="category-title">Exclusive Originals</h2>
+                <div class="movie-slider" id="originalsSlider"></div>
+            </section>
+
+            <section class="movie-category">
+                <h2 class="category-title">Popular Movies</h2>
+                <div class="movie-slider" id="popularSlider"></div>
+            </section>
+
+            <section class="movie-category">
+                <h2 class="category-title">Top Rated</h2>
+                <div class="movie-slider" id="topRatedSlider"></div>
+            </section>
+
+            <section class="movie-category">
+                <h2 class="category-title">Upcoming</h2>
+                <div class="movie-slider" id="upcomingSlider"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- EPUB Reader Overlay -->
+    <div id="epubReaderOverlay" class="theme-dark" style="display:none;">
+        <div class="reader-header">
+            <div class="reader-esc-hint">PlayTorrio Reader</div>
+            <div class="reader-title" id="readerTitle"></div>
+            <div style="width: 120px;"></div>
+        </div>
+        <div id="readerContainer"></div>
+        <div id="focusRuler"></div>
+        <div class="reader-footer">
+            <button id="readerBackBtn" class="reader-back-btn" title="Exit reader">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Back</span>
+            </button>
+            <div class="reader-nav-controls">
+                <button id="readerPrevBtn" class="reader-nav-btn" title="Previous page">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button id="readerNextBtn" class="reader-nav-btn" title="Next page">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+            <div id="readerChapterControls" class="reader-chapter-controls" style="display:none;">
+                <span class="chapter-count-label">Chapters: <strong id="readerChapterCount">0</strong></span>
+                <input id="readerChapterInput" type="number" min="1" step="1" placeholder="1" title="Enter chapter number" />
+                <button id="readerChapterGo" class="reader-nav-btn" title="Go to chapter">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </button>
+            </div>
+            <button id="readerSettingsBtn" class="reader-gear" aria-label="Settings">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+        </div>
+        <div id="readerSettingsPanel" class="reader-settings hidden">
+            <div class="reader-settings-section">
+                <label>Theme</label>
+                <div class="settings-row">
+                    <button class="theme-btn" data-theme="light">Light</button>
+                    <button class="theme-btn" data-theme="dark">Dark</button>
+                    <button class="theme-btn" data-theme="night">Night</button>
+                </div>
+            </div>
+            <div class="reader-settings-section">
+                <label>Focus Mode</label>
+                <div class="settings-row">
+                    <button id="focusModeBtn" class="align-btn" style="width:100%">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Enable Focus
+                    </button>
+                </div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem; text-align: center;">
+                    Use arrow keys to control the line
+                </div>
+                <div style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+                    <label style="font-size: 0.9rem;">Speed</label>
+                    <input id="focusSpeedInput" type="range" min="1" max="20" value="2" style="width: 60%;">
+                    <span id="focusSpeedVal" style="font-size: 0.9rem; width: 20px; text-align: right;">2</span>
+                </div>
+            </div>
+            <div class="reader-settings-section">
+                <label>Font</label>
+                <select id="readerFont" class="modal-select">
+                    <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif">System Default</option>
+                    <option value="Georgia, Cambria, 'Times New Roman', Times, serif">Serif</option>
+                    <option value="Arial, Helvetica, sans-serif">Sans-Serif</option>
+                    <option value="'Courier New', Courier, monospace">Monospace</option>
+                </select>
+            </div>
+            <div class="reader-settings-section">
+                <div class="settings-row justify">
+                    <label>Text Size</label>
+                    <span id="readerFontSizeVal">16px</span>
+                </div>
+                <input id="readerFontSize" type="range" min="12" max="32" step="1" value="16" style="width:100%"/>
+            </div>
+            <div class="reader-settings-section">
+                <div class="settings-row justify">
+                    <label>Line Height</label>
+                    <span id="readerLineHeightVal">1.5</span>
+                </div>
+                <input id="readerLineHeight" type="range" min="1.0" max="2.5" step="0.1" value="1.5" style="width:100%"/>
+            </div>
+            <div class="reader-settings-section">
+                <div class="settings-row justify">
+                    <label>Content Width</label>
+                    <span id="readerWidthVal">80%</span>
+                </div>
+                <input id="readerWidth" type="range" min="40" max="100" step="5" value="80" style="width:100%"/>
+            </div>
+            <div class="reader-settings-section">
+                <label>Alignment</label>
+                <div class="settings-row">
+                    <button class="align-btn" data-align="left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"/></svg>
+                    </button>
+                    <button class="align-btn" data-align="justify">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stream Loading Screen -->
+    <div id="stream-loading-screen">
+        <div class="loading-content">
+            <div class="loading-poster"></div>
+            <div class="loading-info">
+                <h2 class="loading-title">Loading...</h2>
+                <p class="loading-status">Getting streams...</p>
+                <div class="loading-spinner"></div>
+                <button class="loading-back-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stream Player Container -->
+    <div id="stream-player-container">
+        <div class="stream-top-bar">
+            <button class="stream-icon-btn" id="stream-player-back" title="Exit Player">
+                <i class="material-icons">arrow_back</i>
+            </button>
+            <div id="stream-player-title">Video</div>
+        </div>
+
+        <video id="stream-video" crossorigin="anonymous"></video>
+        
+        <!-- Subtitle Overlay -->
+        <div id="subtitle-overlay"></div>
+        
+        <!-- Skip Button -->
+        <button id="skip-segment-btn" class="skip-segment-btn" style="display: none;">
+            <span class="skip-text">Skip Intro</span>
+            <i class="material-icons">fast_forward</i>
+        </button>
+        
+        <!-- Next Episode Button -->
+        <button id="next-episode-btn" class="next-episode-btn" style="display: none;">
+            <i class="material-icons">skip_next</i>
+            <div class="next-ep-text">
+                <span class="next-ep-label">Up Next</span>
+                <span class="next-ep-title">Next Episode</span>
+            </div>
+        </button>
+
+        <!-- Custom controls overlay -->
+        <div class="stream-controls-overlay">
+            <div class="stream-progress-wrapper">
+                <div class="stream-progress-container">
+                    <div class="stream-progress-bar" id="stream-progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="stream-controls-row">
+                <div class="stream-left-controls">
+                    <button class="stream-icon-btn" id="stream-play-pause">
+                        <i class="material-icons">play_arrow</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-volume">
+                        <i class="material-icons">volume_up</i>
+                    </button>
+                    <input type="range" id="stream-volume-slider" min="0" max="100" value="100" class="volume-slider">
+                    <span id="stream-time-display">00:00 / 00:00</span>
+                </div>
+
+                <div class="stream-right-controls">
+                    <button class="stream-icon-btn" id="stream-quality-btn" title="Quality" style="display: none;">
+                        <i class="material-icons">hd</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-settings" title="Providers">
+                        <i class="material-icons">settings</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-subs" title="Subtitles">
+                        <i class="material-icons">subtitles</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-fullscreen" title="Fullscreen">
+                        <i class="material-icons">fullscreen</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Menu (VixSrc only) -->
+        <div id="stream-quality-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>QUALITY</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <button class="quality-btn active" data-quality="-1">Auto</button>
+                <div id="quality-levels-container"></div>
+            </div>
+        </div>
+
+        <!-- Settings Menu (Providers) -->
+        <div id="stream-settings-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>PROVIDERS</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <button class="provider-btn active" data-provider="videasy">Videasy</button>
+                <button class="provider-btn" data-provider="anitaro">Anitaro (4K)</button>
+                <button class="provider-btn" data-provider="cinesrc">CineSrc</button>
+                <button class="provider-btn" data-provider="vidfast">Vidfast</button>
+                <button class="provider-btn" data-provider="vidlink">Vidlink</button>
+                <button class="provider-btn" data-provider="flixer">Flixer</button>
+                <button class="provider-btn" data-provider="vixsrc">VixSrc</button>
+                <button class="provider-btn" data-provider="fmovies">FMovies</button>
+                <button class="provider-btn" data-provider="movies111">111Movies</button>
+                <button class="provider-btn" data-provider="vidzee">Vidzee</button>
+            </div>
+            
+            <div class="stream-menu-divider"></div>
+            
+            <div class="stream-menu-header">
+                <span>SUBTITLE SETTINGS</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <div class="subtitle-setting">
+                    <label>Font Size</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-size-slider" min="50" max="300" value="150" step="10">
+                        <span id="subtitle-size-value">150%</span>
+                    </div>
+                </div>
+                <div class="subtitle-setting">
+                    <label>Position (from bottom)</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-position-slider" min="40" max="500" value="130" step="10">
+                        <span id="subtitle-position-value">130px</span>
+                    </div>
+                </div>
+                <div class="subtitle-setting">
+                    <label>Delay (seconds)</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-delay-slider" min="-10" max="10" value="0" step="0.5">
+                        <span id="subtitle-delay-value">0s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subtitles Menu -->
+        <div id="stream-subs-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>SUBTITLES</span>
+            </div>
+            <div id="stream-subs-list" class="stream-scrollable-list">
+                <div class="no-subs">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="settings-modal">
+        <div class="settings-modal-content">
+            <button class="settings-modal-close" id="close-settings-modal">×</button>
+            <h2>Settings</h2>
+            <div class="settings-option">
+                <div>
+                    <div class="settings-option-label">Streaming Mode</div>
+                    <div class="settings-option-description">Extract and play streams directly in the app</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="streaming-mode-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/streaming.css">
+    <link rel="stylesheet" href="css/continueWatching.css">
+    <link rel="stylesheet" href="css/livetv.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="js/icons.js"></script>
+    <script src="js/titlebar.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/genres.js"></script>
+    <script src="js/comics.js"></script>
+    <script src="js/manga.js"></script>
+    <script src="js/downloader.js"></script>
+    <script src="js/music.js"></script>
+    <script src="js/audiobooks.js"></script>
+    <script src="../js/epubReader.js"></script>
+    <script src="../js/booktorrio.js"></script>
+    <script src="js/books.js"></script>
+    <script src="js/livetv.js"></script>
+    <script src="js/streaming.js"></script>
+    <script src="js/continueWatching.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
+

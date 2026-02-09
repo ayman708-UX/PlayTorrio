@@ -1,0 +1,27 @@
+/* Live TV Section */
+.livetv-section {
+    position: fixed;
+    top: 32px; /* Account for title bar */
+    left: 80px; /* Account for navbar */
+    right: 0;
+    bottom: 0;
+    background: #000;
+    z-index: 100;
+    display: none;
+}
+
+.livetv-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: auto;
+}
+
+#liveTvIframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}

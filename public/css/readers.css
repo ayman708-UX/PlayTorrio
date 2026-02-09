@@ -69,7 +69,10 @@ body.books-reader-open {
 /* EPUB Reader Styles */
 #epubReaderOverlay {
     position: fixed;
-    inset: 0;
+    top: 32px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: var(--bg);
     z-index: 2000;
     display: flex;
@@ -289,6 +292,34 @@ body.books-reader-open {
 
 .reader-settings-section { 
     margin-bottom: 1rem; 
+}
+
+.reader-settings-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.reader-settings-section select,
+.reader-settings-section .modal-select {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--bar-input-border);
+    background: var(--bar-input-bg);
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.reader-settings-section select option,
+.reader-settings-section .modal-select option {
+    background: var(--bar-input-bg);
+    color: var(--text);
+    padding: 0.5rem;
 }
 
 .settings-row { 

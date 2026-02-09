@@ -1,0 +1,331 @@
+/* Custom Play Page Styles - Significantly Different Design */
+
+body {
+    background: linear-gradient(135deg, #0a0118 0%, #1a0a2e 50%, #16213e 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+}
+
+/* Animated gradient background */
+.play-bg-animated {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(135deg, #0a0118, #1a0a2e, #16213e, #0f3460);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Floating particles */
+.particles {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(139, 92, 246, 0.4);
+    border-radius: 50%;
+    animation: float 20s infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+}
+
+/* Main container with glassmorphism */
+.play-container-custom {
+    position: relative;
+    z-index: 10;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Poster section with 3D effect */
+.poster-section-custom {
+    position: relative;
+    perspective: 1000px;
+}
+
+.poster-card-custom {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 24px;
+    padding: 1.5rem;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.1);
+}
+
+.poster-card-custom:hover {
+    transform: rotateY(5deg) rotateX(-5deg) translateZ(20px);
+}
+
+.poster-img-custom {
+    width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Sources section with neon glow */
+.sources-section-custom {
+    background: rgba(10, 1, 24, 0.6);
+    backdrop-filter: blur(30px);
+    border: 2px solid rgba(139, 92, 246, 0.3);
+    border-radius: 32px;
+    padding: 2rem;
+    box-shadow: 0 0 60px rgba(139, 92, 246, 0.2), inset 0 0 40px rgba(139, 92, 246, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.sources-section-custom::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Provider tabs with neon effect */
+.provider-tabs-custom {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.provider-tab-custom {
+    padding: 0.75rem 1.5rem;
+    background: rgba(139, 92, 246, 0.1);
+    border: 2px solid rgba(139, 92, 246, 0.3);
+    border-radius: 16px;
+    color: rgba(167, 139, 250, 0.8);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.provider-tab-custom::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, transparent, rgba(139, 92, 246, 0.2), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.provider-tab-custom:hover::before {
+    transform: translateX(100%);
+}
+
+.provider-tab-custom:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.6);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.provider-tab-custom.active {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-color: #8b5cf6;
+    color: #fff;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6), 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+/* Torrent cards with holographic effect */
+.torrent-card-custom {
+    background: linear-gradient(135deg, rgba(26, 10, 46, 0.8), rgba(22, 33, 62, 0.6));
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.torrent-card-custom::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.1) 50%, transparent 70%);
+    transform: rotate(45deg);
+    transition: all 0.6s;
+}
+
+.torrent-card-custom:hover {
+    transform: translateX(8px) scale(1.02);
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3), inset 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.torrent-card-custom:hover::after {
+    right: 150%;
+}
+
+/* Quality badges with glow */
+.quality-badge-custom {
+    padding: 0.4rem 1rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.quality-4k { 
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #000;
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+}
+
+.quality-1080p { 
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+}
+
+.quality-720p { 
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+}
+
+/* Action buttons with neon glow */
+.action-btn-custom {
+    padding: 0.75rem 1.5rem;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    border: 2px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-play-custom {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-color: #8b5cf6;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+.btn-play-custom:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.8), 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+.btn-copy-custom {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+.btn-copy-custom:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+/* Episode grid with cards */
+.episode-grid-custom {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.episode-card-custom {
+    background: rgba(139, 92, 246, 0.1);
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.episode-card-custom:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.6);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+.episode-card-custom.active {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+}
+
+/* Loading spinner with neon */
+.spinner-custom {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(139, 92, 246, 0.2);
+    border-top-color: #8b5cf6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(10, 1, 24, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}

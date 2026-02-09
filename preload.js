@@ -119,5 +119,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
         return null;
       }
     }
-  }
+  },
+
+  // Stream Extraction
+  extractStream: (url) => ipcRenderer.invoke('extract-stream', url),
+  closeStreamExtraction: () => ipcRenderer.invoke('close-stream-extraction'),
+  onStreamDetected: (callback) => ipcRenderer.on('stream-detected', (_event, data) => callback(data)),
+  removeStreamListener: (handler) => ipcRenderer.removeListener('stream-detected', handler)
 });

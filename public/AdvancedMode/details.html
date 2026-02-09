@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTorrio</title>
+    <link rel="stylesheet" href="css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/details.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="custom-titlebar" id="customTitlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon">▶</div>
+            <div class="titlebar-title">PlayTorrio</div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button minimize" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 12 12"><rect x="0" y="5" width="12" height="1" fill="currentColor"/></svg>
+            </button>
+            <button class="titlebar-button maximize" id="maximizeBtn" title="Maximize">
+                <svg viewBox="0 0 12 12">
+                    <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                    <line x1="2.5" y1="2.5" x2="11.5" y2="2.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="11.5" y1="11.5" x2="2.5" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+            </button>
+            <button class="titlebar-button close" id="closeBtn" title="Close">
+                <svg viewBox="0 0 12 12"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="details-page" id="detailsPage">
+        <!-- Ambient Background Decoration -->
+        <div class="ambient-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="details-loading" id="detailsLoading">
+            <div class="spinner-large"></div>
+            <p>Loading details...</p>
+        </div>
+
+        <!-- Content Container -->
+        <div class="details-content" id="detailsContent" style="display: none;">
+            <!-- Back Button -->
+            <button class="back-to-browse" id="backBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Back
+            </button>
+
+            <!-- Hero Section with Backdrop -->
+            <div class="details-hero" id="detailsHero">
+                <div class="hero-backdrop"></div>
+                <div class="hero-gradient"></div>
+            </div>
+
+            <!-- Main Info Section -->
+            <div class="details-main">
+                <div class="details-poster-section">
+                    <div class="poster-container">
+                        <img id="detailsPoster" alt="Poster" class="details-poster">
+                        <div class="poster-glow"></div>
+                    </div>
+                </div>
+
+                <div class="details-info-section">
+                    <h1 class="details-title" id="detailsTitle"></h1>
+                    
+                    <div class="details-meta">
+                        <span class="meta-rating" id="detailsRating"></span>
+                        <span class="meta-year" id="detailsYear"></span>
+                        <span class="meta-runtime" id="detailsRuntime"></span>
+                        <span class="meta-type" id="detailsType"></span>
+                    </div>
+
+                    <div class="details-genres" id="detailsGenres"></div>
+
+                    <p class="details-tagline" id="detailsTagline"></p>
+                    <p class="details-overview" id="detailsOverview"></p>
+
+                    <div class="details-actions">
+                        <button class="action-btn primary" id="playNowBtn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Play Now
+                        </button>
+                        <button class="action-btn secondary">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            My List
+                        </button>
+                        <button class="action-btn secondary" id="trailerBtn" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                            </svg>
+                            Watch Trailer
+                        </button>
+                    </div>
+
+                    <div class="details-extra-info">
+                        <div class="info-item">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value" id="detailsStatus"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Original Language:</span>
+                            <span class="info-value" id="detailsLanguage"></span>
+                        </div>
+                        <div class="info-item" id="budgetItem">
+                            <span class="info-label">Budget:</span>
+                            <span class="info-value" id="detailsBudget"></span>
+                        </div>
+                        <div class="info-item" id="revenueItem">
+                            <span class="info-label">Revenue:</span>
+                            <span class="info-value" id="detailsRevenue"></span>
+                        </div>
+                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- TV Show Seasons & Episodes -->
+            <div class="details-section" id="seasonsSection" style="display: none;">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                    </svg>
+                    Seasons & Episodes
+                </h2>
+                <div class="seasons-selector" id="seasonsSelector"></div>
+                <div class="episodes-grid" id="episodesGrid"></div>
+            </div>
+
+            <!-- Screenshots Gallery -->
+            <div class="details-section" id="screenshotsSection" style="display: none;">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    </svg>
+                    Screenshots
+                </h2>
+                <div class="slider-container">
+                    <button class="slider-nav-btn prev" id="screenshotsPrev">‹</button>
+                    <div class="screenshots-grid" id="screenshotsGrid"></div>
+                    <button class="slider-nav-btn next" id="screenshotsNext">›</button>
+                </div>
+            </div>
+
+            <!-- Cast Section -->
+            <div class="details-section" id="castSection" style="display: none;">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    Cast
+                </h2>
+                <div class="slider-container">
+                    <button class="slider-nav-btn prev" id="castPrev">‹</button>
+                    <div class="cast-slider" id="castSlider"></div>
+                    <button class="slider-nav-btn next" id="castNext">›</button>
+                </div>
+            </div>
+
+            <!-- Similar Content -->
+            <div class="details-section" id="similarSection" style="display: none;">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>
+                    </svg>
+                    More Like This
+                </h2>
+                <div class="slider-container">
+                    <button class="slider-nav-btn prev" id="similarPrev">‹</button>
+                    <div class="similar-grid" id="similarGrid"></div>
+                    <button class="slider-nav-btn next" id="similarNext">›</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" id="lightboxClose">×</button>
+        <button class="lightbox-nav prev" id="lightboxPrev">‹</button>
+        <button class="lightbox-nav next" id="lightboxNext">›</button>
+        <img id="lightboxImage" alt="Screenshot">
+    </div>
+
+    <!-- Trailer Modal -->
+    <div class="trailer-modal" id="trailerModal">
+        <div class="trailer-modal-content">
+            <button class="trailer-modal-close" id="trailerModalClose">×</button>
+            <div class="trailer-modal-container" id="trailerModalContainer"></div>
+        </div>
+    </div>
+
+    <!-- Stream Loading Screen -->
+    <div id="stream-loading-screen">
+        <div class="loading-content">
+            <div class="loading-poster"></div>
+            <div class="loading-info">
+                <h2 class="loading-title">Loading...</h2>
+                <p class="loading-status">Getting streams...</p>
+                <div class="loading-spinner"></div>
+                <button class="loading-back-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stream Player Container -->
+    <div id="stream-player-container">
+        <div class="stream-top-bar">
+            <button class="stream-icon-btn" id="stream-player-back" title="Exit Player">
+                <i class="material-icons">arrow_back</i>
+            </button>
+            <div id="stream-player-title">Video</div>
+        </div>
+
+        <video id="stream-video" crossorigin="anonymous"></video>
+        
+        <!-- Subtitle Overlay -->
+        <div id="subtitle-overlay"></div>
+        
+        <!-- Skip Button -->
+        <button id="skip-segment-btn" class="skip-segment-btn" style="display: none;">
+            <span class="skip-text">Skip Intro</span>
+            <i class="material-icons">fast_forward</i>
+        </button>
+        
+        <!-- Next Episode Button -->
+        <button id="next-episode-btn" class="next-episode-btn" style="display: none;">
+            <i class="material-icons">skip_next</i>
+            <div class="next-ep-text">
+                <span class="next-ep-label">Up Next</span>
+                <span class="next-ep-title">Next Episode</span>
+            </div>
+        </button>
+
+        <!-- Custom controls overlay -->
+        <div class="stream-controls-overlay">
+            <div class="stream-progress-wrapper">
+                <div class="stream-progress-container">
+                    <div class="stream-progress-bar" id="stream-progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="stream-controls-row">
+                <div class="stream-left-controls">
+                    <button class="stream-icon-btn" id="stream-play-pause">
+                        <i class="material-icons">play_arrow</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-volume">
+                        <i class="material-icons">volume_up</i>
+                    </button>
+                    <input type="range" id="stream-volume-slider" min="0" max="100" value="100" class="volume-slider">
+                    <span id="stream-time-display">00:00 / 00:00</span>
+                </div>
+
+                <div class="stream-right-controls">
+                    <button class="stream-icon-btn" id="stream-quality-btn" title="Quality" style="display: none;">
+                        <i class="material-icons">hd</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-settings" title="Providers">
+                        <i class="material-icons">settings</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-subs" title="Subtitles">
+                        <i class="material-icons">subtitles</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-fullscreen" title="Fullscreen">
+                        <i class="material-icons">fullscreen</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Menu (VixSrc only) -->
+        <div id="stream-quality-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>QUALITY</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <button class="quality-btn active" data-quality="-1">Auto</button>
+                <div id="quality-levels-container"></div>
+            </div>
+        </div>
+
+        <!-- Settings Menu (Providers) -->
+        <div id="stream-settings-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>PROVIDERS</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <button class="provider-btn active" data-provider="videasy">Videasy</button>
+                <button class="provider-btn" data-provider="anitaro">Anitaro (4K)</button>
+                <button class="provider-btn" data-provider="cinesrc">CineSrc</button>
+                <button class="provider-btn" data-provider="vidfast">Vidfast</button>
+                <button class="provider-btn" data-provider="vidlink">Vidlink</button>
+                <button class="provider-btn" data-provider="flixer">Flixer</button>
+                <button class="provider-btn" data-provider="vixsrc">VixSrc</button>
+                <button class="provider-btn" data-provider="fmovies">FMovies</button>
+                <button class="provider-btn" data-provider="movies111">111Movies</button>
+                <button class="provider-btn" data-provider="vidzee">Vidzee</button>
+            </div>
+            
+            <div class="stream-menu-divider"></div>
+            
+            <div class="stream-menu-header">
+                <span>SUBTITLE SETTINGS</span>
+            </div>
+            <div class="stream-scrollable-list">
+                <div class="subtitle-setting">
+                    <label>Font Size</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-size-slider" min="50" max="300" value="150" step="10">
+                        <span id="subtitle-size-value">150%</span>
+                    </div>
+                </div>
+                <div class="subtitle-setting">
+                    <label>Position (from bottom)</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-position-slider" min="40" max="500" value="130" step="10">
+                        <span id="subtitle-position-value">130px</span>
+                    </div>
+                </div>
+                <div class="subtitle-setting">
+                    <label>Delay (seconds)</label>
+                    <div class="subtitle-slider-container">
+                        <input type="range" id="subtitle-delay-slider" min="-10" max="10" value="0" step="0.5">
+                        <span id="subtitle-delay-value">0s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subtitles Menu -->
+        <div id="stream-subs-menu" class="stream-menu-popup">
+            <div class="stream-menu-header">
+                <span>SUBTITLES</span>
+            </div>
+            <div id="stream-subs-list" class="stream-scrollable-list">
+                <div class="no-subs">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/streaming.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="js/streaming.js"></script>
+    <script src="js/titlebar.js"></script>
+    <script src="js/details.js"></script>
+</body>
+</html>
