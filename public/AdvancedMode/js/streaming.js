@@ -104,10 +104,15 @@ const PROVIDERS = {
         movie: (tmdbId) => `https://flixer.sh/watch/movie/${tmdbId}`,
         tv: (tmdbId, season, episode) => `https://flixer.sh/watch/tv/${tmdbId}/${season}/${episode}`
     },
-    vixsrc: {
-        name: 'VixSrc',
-        movie: (tmdbId) => `https://vixsrc.to/movie/${tmdbId}/`,
-        tv: (tmdbId, season, episode) => `https://vixsrc.to/tv/${tmdbId}/${season}/${episode}/`
+    vidsrc: {
+        name: 'VidSrc',
+        movie: (tmdbId) => `https://vidsrc.cc/v2/embed/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season}/${episode}`
+    },
+    vidnest: {
+        name: 'VidNest',
+        movie: (tmdbId) => `https://vidnest.fun/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidnest.fun/tv/${tmdbId}/${season}/${episode}`
     },
     fmovies: {
         name: 'FMovies',
@@ -150,12 +155,6 @@ async function extractStream(url, provider = currentProvider) {
         if (provider === 'flixer') {
             console.log('[StreamExtractor] Waiting 3 seconds for Flixer...');
             await new Promise(resolve => setTimeout(resolve, 3000));
-        }
-        
-        // Add delay for VixSrc (needs time to load player)
-        if (provider === 'vixsrc') {
-            console.log('[StreamExtractor] Waiting 5 seconds for VixSrc...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
         }
         
         console.log('[StreamExtractor] Calling electronAPI.extractStream...');
@@ -1340,9 +1339,9 @@ function populateQualityLevels() {
         container.appendChild(btn);
     });
     
-    // Show quality button only for VixSrc
+    // Show quality button for all providers except anitaro
     const qualityBtn = document.getElementById('stream-quality-btn');
-    if (qualityBtn && currentProvider === 'vixsrc') {
+    if (qualityBtn && currentProvider !== 'anitaro') {
         qualityBtn.style.display = 'flex';
     }
     
@@ -1378,7 +1377,7 @@ function setQuality(levelIndex) {
 function updateQualityButtonVisibility() {
     const qualityBtn = document.getElementById('stream-quality-btn');
     if (qualityBtn) {
-        if (currentProvider === 'vixsrc' && streamHls && streamHls.levels && streamHls.levels.length > 0) {
+        if (currentProvider !== 'anitaro' && streamHls && streamHls.levels && streamHls.levels.length > 0) {
             qualityBtn.style.display = 'flex';
         } else {
             qualityBtn.style.display = 'none';
@@ -1612,7 +1611,7 @@ function initPlayerControls() {
         });
     }
     
-    // Quality button (VixSrc only)
+    // Quality button (all providers except anitaro)
     const qualityBtn = document.getElementById('stream-quality-btn');
     const qualityMenu = document.getElementById('stream-quality-menu');
     if (qualityBtn && qualityMenu) {

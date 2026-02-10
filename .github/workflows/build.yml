@@ -232,7 +232,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   build-macos-x64:
-    runs-on: macos-15
+    runs-on: macos-15  # ARM64 runner, cross-compiling to x64
     steps:
       - uses: actions/checkout@v4
 
@@ -241,6 +241,12 @@ jobs:
           node-version: '20'
 
       - run: npm install --verbose || npm install --verbose || npm install --verbose
+
+      - name: Rebuild native modules for x64
+        run: |
+          echo "Rebuilding native modules for x64 architecture..."
+          npm rebuild --arch=x64 --verbose
+          echo "✓ Native modules rebuilt for x64"
 
       - name: Extract yt-dlp (macOS)
         run: |

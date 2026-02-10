@@ -905,10 +905,14 @@ const embeddedServers = {
         type === 'movie'
             ? `https://vidsrc.vip/embed/movie/${id}`
             : `https://vidsrc.vip/embed/tv/${id}/${season}/${episode}`,
-    'VixSrc': (type, id, season, episode) =>
+    'VidSrc CC': (type, id, season, episode) =>
         type === 'movie'
-            ? `https://vixsrc.to/movie/${id}/`
-            : `https://vixsrc.to/tv/${id}/${season}/${episode}/`
+            ? `https://vidsrc.cc/v2/embed/movie/${id}`
+            : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}`,
+    'VidNest': (type, id, season, episode) =>
+        type === 'movie'
+            ? `https://vidnest.fun/movie/${id}`
+            : `https://vidnest.fun/tv/${id}/${season}/${episode}`
 };
 
 // DOM elements for embedded servers
