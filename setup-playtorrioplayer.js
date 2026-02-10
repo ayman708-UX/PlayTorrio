@@ -15,9 +15,9 @@ const { execSync } = require('child_process');
 const PLAYER_DIR = path.join(__dirname, 'PlayTorrioPlayer');
 
 const DOWNLOAD_URLS = {
-    win32: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.65/PlayTorrio-Windows-x64.zip',
-    darwin: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.65/PlayTorrio-macOS-Universal.zip',
-    linux: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.65/NipaPlay-1.8.65-Linux-amd64.AppImage'
+    win32: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.67/PlayTorrio-Windows-x64.zip',
+    darwin: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.67/PlayTorrio-macOS-Universal.zip',
+    linux: 'https://github.com/ayman708-UX/PlayTorrioPlayerV2/releases/download/v1.8.67/NipaPlay-1.8.67-Linux-amd64.AppImage'
 };
 
 function downloadFile(url, destPath) {
@@ -177,9 +177,10 @@ function verifyInstallation() {
         }
     } else {
         // Linux - check for AppImage first
-        // Check for specific AppImage names from v1.8.65+ release (NipaPlay) and older versions
+        // Check for specific AppImage names from v1.8.67+ release (NipaPlay) and older versions
         const specificAppImages = [
-            path.join(PLAYER_DIR, 'NipaPlay-1.8.65-Linux-amd64.AppImage'),  // v1.8.65+
+            path.join(PLAYER_DIR, 'NipaPlay-1.8.67-Linux-amd64.AppImage'),  // v1.8.67+
+            path.join(PLAYER_DIR, 'NipaPlay-1.8.65-Linux-amd64.AppImage'),  // v1.8.65
             path.join(PLAYER_DIR, 'NipaPlay-1.8.58-Linux-amd64.AppImage'),  // v1.8.58
             path.join(PLAYER_DIR, 'NipaPlay-1.8.47-Linux-amd64.AppImage'),  // v1.8.47
             path.join(PLAYER_DIR, 'NipaPlay-1.8.46-Linux-amd64.AppImage'),  // v1.8.46

@@ -2,11 +2,10 @@
 .navbar {
     position: fixed;
     left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 32px; /* Start below titlebar */
     width: 68px;
-    height: auto;
-    max-height: 85vh;
+    height: calc(100vh - 64px); /* Account for titlebar and bottom padding */
+    max-height: calc(100vh - 64px);
     background: rgba(15, 8, 32, 0.4);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);

@@ -170,11 +170,6 @@ body.platform-darwin .main-content {
     margin-top: 32px;
 }
 
-body.platform-darwin .navbar {
-    top: 32px;
-    height: calc(100vh - 32px);
-}
-
 /* Maximize state icon change - show restore icon when maximized */
 .custom-titlebar.maximized .titlebar-button.maximize svg {
     /* When maximized, show a "restore down" icon (smaller overlapping squares) */

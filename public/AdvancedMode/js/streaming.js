@@ -548,7 +548,7 @@ window.getContinueWatchingList = getContinueWatchingList;
 window.removeFromContinueWatching = removeFromContinueWatching;
 
 // Play stream
-async function playStream(type, tmdbId, posterUrl, title, season = null, episode = null) {
+async function playStream(type, tmdbId, posterUrl, title, season = null, episode = null, providerOrder = null) {
     console.log('[StreamingMode] ========================================');
     console.log('[StreamingMode] playStream called');
     console.log('[StreamingMode] Type:', type);
@@ -570,6 +570,26 @@ async function playStream(type, tmdbId, posterUrl, title, season = null, episode
     }
     
     isLoadingStream = true;
+    
+    // Define provider priority order: videasy, vidlink, vidfast, then others, anitaro last
+    if (!providerOrder) {
+        const allProviders = Object.keys(PROVIDERS);
+        providerOrder = ['videasy', 'vidlink', 'vidfast'];
+        
+        // Add remaining providers except anitaro
+        allProviders.forEach(p => {
+            if (!providerOrder.includes(p) && p !== 'anitaro') {
+                providerOrder.push(p);
+            }
+        });
+        
+        // Add anitaro last
+        if (allProviders.includes('anitaro')) {
+            providerOrder.push('anitaro');
+        }
+        
+        console.log('[StreamingMode] Provider order:', providerOrder);
+    }
     
     // Get backdrop image instead of poster
     let backdropUrl = posterUrl;
@@ -608,85 +628,102 @@ async function playStream(type, tmdbId, posterUrl, title, season = null, episode
         nextEpisodeInfo = null;
     }
     
-    try {
-        // Show loading screen with backdrop
-        console.log('[StreamingMode] Showing loading screen...');
-        showLoadingScreen(backdropUrl, title);
+    // Show loading screen with backdrop
+    console.log('[StreamingMode] Showing loading screen...');
+    showLoadingScreen(backdropUrl, title);
+    
+    // Try each provider in order until one succeeds
+    let lastError = null;
+    for (let i = 0; i < providerOrder.length; i++) {
+        const provider = providerOrder[i];
+        currentProvider = provider;
         
-        // Get provider URL
-        const providerUrl = getProviderUrl(currentProvider, type, tmdbId, season, episode);
-        if (!providerUrl) {
-            throw new Error('Invalid provider or parameters');
-        }
-        
-        console.log('[StreamingMode] Provider URL:', providerUrl);
-        console.log('[StreamingMode] Current provider:', currentProvider);
-        
-        updateLoadingStatus(`Extracting from ${PROVIDERS[currentProvider].name}...`);
-        
-        // Extract stream
-        console.log('[StreamingMode] Starting stream extraction...');
-        const streamUrl = await extractStream(providerUrl, currentProvider);
-        console.log('[StreamingMode] ✅ Stream extracted:', streamUrl);
-        
-        currentStreamUrl = streamUrl;
-        
-        updateLoadingStatus('Loading subtitles...');
-        
-        // Load subtitles
-        console.log('[StreamingMode] Loading subtitles...');
-        
-        // Fetch IMDB ID for Stremio addons
-        let imdbId = null;
         try {
-            const API_KEY = 'c3515fdc674ea2bd7b514f4bc3616a4a';
-            const BASE_URL = 'https://api.themoviedb.org/3';
-            const externalIdsUrl = `${BASE_URL}/${type}/${tmdbId}/external_ids?api_key=${API_KEY}`;
-            const externalIdsResponse = await fetch(externalIdsUrl);
-            const externalIdsData = await externalIdsResponse.json();
-            imdbId = externalIdsData.imdb_id;
-            console.log('[StreamingMode] IMDB ID:', imdbId);
+            console.log(`[StreamingMode] Trying provider ${i + 1}/${providerOrder.length}: ${provider}`);
+            updateLoadingStatus(`Extracting from ${PROVIDERS[provider].name}... (${i + 1}/${providerOrder.length})`);
+            
+            // Get provider URL
+            const providerUrl = getProviderUrl(provider, type, tmdbId, season, episode);
+            if (!providerUrl) {
+                console.warn(`[StreamingMode] Invalid provider URL for ${provider}, skipping...`);
+                continue;
+            }
+            
+            console.log('[StreamingMode] Provider URL:', providerUrl);
+            
+            // Extract stream with timeout
+            console.log('[StreamingMode] Starting stream extraction...');
+            const streamUrl = await extractStream(providerUrl, provider);
+            console.log('[StreamingMode] ✅ Stream extracted:', streamUrl);
+            
+            currentStreamUrl = streamUrl;
+            
+            updateLoadingStatus('Loading subtitles...');
+            
+            // Load subtitles
+            console.log('[StreamingMode] Loading subtitles...');
+            
+            // Fetch IMDB ID for Stremio addons
+            let imdbId = null;
+            try {
+                const API_KEY = 'c3515fdc674ea2bd7b514f4bc3616a4a';
+                const BASE_URL = 'https://api.themoviedb.org/3';
+                const externalIdsUrl = `${BASE_URL}/${type}/${tmdbId}/external_ids?api_key=${API_KEY}`;
+                const externalIdsResponse = await fetch(externalIdsUrl);
+                const externalIdsData = await externalIdsResponse.json();
+                imdbId = externalIdsData.imdb_id;
+                console.log('[StreamingMode] IMDB ID:', imdbId);
+            } catch (error) {
+                console.warn('[StreamingMode] Could not fetch IMDB ID:', error);
+            }
+            
+            currentSubtitles = await loadSubtitles(tmdbId, imdbId, season, episode, type);
+            console.log('[StreamingMode] Loaded', currentSubtitles.length, 'subtitles');
+            
+            // Load intro/recap/credits data
+            console.log('[StreamingMode] Loading intro data...');
+            introData = await loadIntroData(tmdbId, season, episode);
+            console.log('[StreamingMode] Intro data:', introData);
+            
+            // Hide loading, show player
+            console.log('[StreamingMode] Hiding loading screen...');
+            hideLoadingScreen();
+            
+            console.log('[StreamingMode] Showing player...');
+            showStreamPlayer();
+            
+            // Load stream into player
+            console.log('[StreamingMode] Loading stream into player...');
+            loadStreamIntoPlayer(streamUrl, title);
+            
+            // Load subtitles into player
+            console.log('[StreamingMode] Loading subtitles into player...');
+            loadSubtitlesIntoPlayer(currentSubtitles);
+            
+            console.log(`[StreamingMode] ✅ Stream playback initiated successfully with ${provider}`);
+            
+            isLoadingStream = false;
+            return true;
+            
         } catch (error) {
-            console.warn('[StreamingMode] Could not fetch IMDB ID:', error);
+            console.error(`[StreamingMode] ❌ Provider ${provider} failed:`, error.message);
+            lastError = error;
+            
+            // If this is not the last provider, continue to next one
+            if (i < providerOrder.length - 1) {
+                console.log(`[StreamingMode] Retrying with next provider...`);
+                continue;
+            }
         }
-        
-        currentSubtitles = await loadSubtitles(tmdbId, imdbId, season, episode, type);
-        console.log('[StreamingMode] Loaded', currentSubtitles.length, 'subtitles');
-        
-        // Load intro/recap/credits data
-        console.log('[StreamingMode] Loading intro data...');
-        introData = await loadIntroData(tmdbId, season, episode);
-        console.log('[StreamingMode] Intro data:', introData);
-        
-        // Hide loading, show player
-        console.log('[StreamingMode] Hiding loading screen...');
-        hideLoadingScreen();
-        
-        console.log('[StreamingMode] Showing player...');
-        showStreamPlayer();
-        
-        // Load stream into player
-        console.log('[StreamingMode] Loading stream into player...');
-        loadStreamIntoPlayer(streamUrl, title);
-        
-        // Load subtitles into player
-        console.log('[StreamingMode] Loading subtitles into player...');
-        loadSubtitlesIntoPlayer(currentSubtitles);
-        
-        console.log('[StreamingMode] ✅ Stream playback initiated successfully');
-        
-        return true;
-    } catch (error) {
-        console.error('[StreamingMode] ❌ Error:', error);
-        console.error('[StreamingMode] Error stack:', error.stack);
-        hideLoadingScreen();
-        isLoadingStream = false;
-        alert(`Failed to load stream: ${error.message}`);
-        return false;
-    } finally {
-        isLoadingStream = false;
-        console.log('[StreamingMode] isLoadingStream reset to false');
     }
+    
+    // All providers failed
+    console.error('[StreamingMode] ❌ All providers failed');
+    console.error('[StreamingMode] Last error:', lastError);
+    hideLoadingScreen();
+    isLoadingStream = false;
+    alert(`Failed to load stream from all providers. Last error: ${lastError?.message || 'Unknown error'}`);
+    return false;
 }
 
 // Load stream into video player using HLS.js or dash.js

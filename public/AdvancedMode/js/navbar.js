@@ -329,6 +329,8 @@ document.addEventListener('click', (e) => {
             showBooksPage();
         } else if (itemId === 'live-tv') {
             showLiveTvPage();
+        } else if (itemId === 'iptv') {
+            window.location.href = 'iptv.html';
         } else if (itemId === 'settings') {
             // Navigate to settings page
             window.location.href = 'settings.html';

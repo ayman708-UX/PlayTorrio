@@ -250,6 +250,114 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
     app.use(express.json());
     
     // ============================================================================
+    // IPTV PROXY - Handle redirects for IPTV streams
+    // ============================================================================
+    app.get('/api/iptv-proxy', async (req, res) => {
+        const { url } = req.query;
+        
+        if (!url) {
+            return res.status(400).send('URL parameter required');
+        }
+
+        console.log(`[IPTV PROXY] Proxying: ${url}`);
+
+        try {
+            // Build headers that mimic a real player
+            const headers = {
+                'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Connection': 'keep-alive'
+            };
+
+            // Forward range header if present
+            if (req.headers.range) {
+                headers['Range'] = req.headers.range;
+            }
+
+            // Forward referer if present
+            if (req.headers.referer) {
+                headers['Referer'] = req.headers.referer;
+            }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                redirect: 'follow',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                console.error(`[IPTV PROXY] Error: ${response.status} ${response.statusText}`);
+                return res.status(response.status).send(`Stream error: ${response.statusText}`);
+            }
+
+            // Check if this is an HLS playlist
+            const contentType = response.headers.get('content-type') || '';
+            const isM3U8 = url.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('m3u8');
+
+            if (isM3U8) {
+                // For HLS playlists, rewrite URLs to go through proxy
+                const text = await response.text();
+                const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+                
+                // Rewrite relative URLs in the playlist
+                const rewritten = text.split('\n').map(line => {
+                    if (line.trim() && !line.startsWith('#')) {
+                        // This is a URL line
+                        if (line.startsWith('http://') || line.startsWith('https://')) {
+                            // Absolute URL - proxy it
+                            return `/api/iptv-proxy?url=${encodeURIComponent(line)}`;
+                        } else {
+                            // Relative URL - make it absolute then proxy
+                            const absoluteUrl = baseUrl + line;
+                            return `/api/iptv-proxy?url=${encodeURIComponent(absoluteUrl)}`;
+                        }
+                    }
+                    return line;
+                }).join('\n');
+
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.send(rewritten);
+            } else {
+                // For video segments, stream directly
+                res.status(response.status);
+                response.headers.forEach((value, key) => {
+                    if (!['connection', 'transfer-encoding', 'content-encoding'].includes(key.toLowerCase())) {
+                        res.setHeader(key, value);
+                    }
+                });
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Headers', '*');
+
+                // Pipe the stream
+                const reader = response.body.getReader();
+                const pump = async () => {
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            if (!res.write(value)) {
+                                await new Promise(resolve => res.once('drain', resolve));
+                            }
+                        }
+                        res.end();
+                    } catch (err) {
+                        console.error('[IPTV PROXY] Stream error:', err.message);
+                        res.end();
+                    }
+                };
+                pump();
+            }
+
+        } catch (error) {
+            console.error('[IPTV PROXY] Error:', error.message);
+            res.status(500).send(`Proxy error: ${error.message}`);
+        }
+    });
+    
+    // ============================================================================
     // TMDB PROXY (Added for Basic Mode)
     // ============================================================================
     app.use('/api/tmdb', async (req, res) => {

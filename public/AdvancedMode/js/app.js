@@ -359,6 +359,48 @@ async function initApp() {
     console.log('✅ App initialized!');
 }
 
+// Update Listener
+if (window.electronAPI && window.electronAPI.onUpdateAvailable) {
+    window.electronAPI.onUpdateAvailable((info) => {
+        console.log('Update available:', info);
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-[#14141f] border border-blue-500/50 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl transform scale-100 transition-transform duration-300">
+                <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white text-center mb-2">Update Available!</h2>
+                <p class="text-gray-400 text-center mb-6">Version <span class="text-white font-bold">${info.version}</span> is ready to download.</p>
+                <div class="flex flex-col gap-3">
+                    <button id="update-download-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                        <span>Download Now</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </button>
+                    <button id="update-later-btn" class="w-full py-2 text-gray-500 hover:text-gray-300 text-sm font-medium transition-colors">
+                        Remind Me Later
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        document.getElementById('update-download-btn').onclick = () => {
+             if (window.electronAPI.openExternal) {
+                 window.electronAPI.openExternal(info.downloadUrl);
+             }
+             modal.remove();
+        };
+        
+        document.getElementById('update-later-btn').onclick = () => {
+            modal.remove();
+        };
+    });
+}
+
 // Start preloading and initializing
 preloadMovieData().then(() => {
     initApp();
