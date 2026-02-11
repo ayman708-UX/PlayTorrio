@@ -1619,6 +1619,100 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
         }
     });
 
+    // ============================================================================
+    // MY LIST ENDPOINTS - User's personal watchlist
+    // ============================================================================
+    
+    // Get my list
+    app.get('/api/my-list', async (req, res) => {
+        try {
+            const MY_LIST_PATH = path.join(userDataPath, 'my-list.json');
+            
+            if (fs.existsSync(MY_LIST_PATH)) {
+                const data = await fs.promises.readFile(MY_LIST_PATH, 'utf8');
+                const list = JSON.parse(data);
+                return res.json(Array.isArray(list) ? list : []);
+            }
+            
+            return res.json([]);
+        } catch (e) {
+            console.error('[MyList] Error reading:', e);
+            return res.status(500).json({ error: e?.message || 'Failed to read my list' });
+        }
+    });
+    
+    // Add to my list
+    app.post('/api/my-list/add', async (req, res) => {
+        try {
+            const MY_LIST_PATH = path.join(userDataPath, 'my-list.json');
+            const newItem = req.body;
+            
+            // Validate required fields
+            if (!newItem.id || !newItem.media_type || !newItem.title) {
+                return res.status(400).json({ error: 'Missing required fields: id, media_type, title' });
+            }
+            
+            // Read existing list
+            let list = [];
+            if (fs.existsSync(MY_LIST_PATH)) {
+                const data = await fs.promises.readFile(MY_LIST_PATH, 'utf8');
+                list = JSON.parse(data);
+            }
+            
+            // Check if already exists
+            const exists = list.some(item => item.id === newItem.id && item.media_type === newItem.media_type);
+            if (exists) {
+                return res.json({ success: true, message: 'Item already in list' });
+            }
+            
+            // Add new item with timestamp
+            const itemToAdd = {
+                ...newItem,
+                added_date: new Date().toISOString()
+            };
+            
+            list.push(itemToAdd);
+            
+            // Write back to file
+            await fs.promises.writeFile(MY_LIST_PATH, JSON.stringify(list, null, 2));
+            
+            return res.json({ success: true, message: 'Added to my list' });
+        } catch (e) {
+            console.error('[MyList] Error adding:', e);
+            return res.status(500).json({ error: e?.message || 'Failed to add to my list' });
+        }
+    });
+    
+    // Remove from my list
+    app.post('/api/my-list/remove', async (req, res) => {
+        try {
+            const MY_LIST_PATH = path.join(userDataPath, 'my-list.json');
+            const { id } = req.body;
+            
+            if (!id) {
+                return res.status(400).json({ error: 'Missing id' });
+            }
+            
+            // Read existing list
+            let list = [];
+            if (fs.existsSync(MY_LIST_PATH)) {
+                const data = await fs.promises.readFile(MY_LIST_PATH, 'utf8');
+                list = JSON.parse(data);
+            }
+            
+            // Filter out the item
+            const newList = list.filter(item => item.id !== parseInt(id));
+            
+            // Write back to file
+            await fs.promises.writeFile(MY_LIST_PATH, JSON.stringify(newList, null, 2));
+            
+            return res.json({ success: true, message: 'Removed from my list' });
+        } catch (e) {
+            console.error('[MyList] Error removing:', e);
+            return res.status(500).json({ error: e?.message || 'Failed to remove from my list' });
+        }
+    });
+
     // --- AllDebrid minimal adapter & auth (PIN flow) ---
     const AD_BASE = 'https://api.alldebrid.com/v4';
     function isNetworkError(e) {

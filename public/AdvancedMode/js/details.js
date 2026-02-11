@@ -60,6 +60,9 @@ async function loadMediaDetails() {
         }
         
         hideLoading();
+        
+        // Check my list status after details are loaded
+        checkMyListStatus();
     } catch (error) {
         console.error('Error loading details:', error);
         showError('Failed to load details');
@@ -659,3 +662,145 @@ async function checkAutoPlay() {
         }
     }
 }
+
+
+// ============================================================================
+// MY LIST FUNCTIONALITY
+// ============================================================================
+
+let isInList = false;
+
+// Check if current item is in my list
+async function checkMyListStatus() {
+    try {
+        const response = await fetch('/api/my-list');
+        if (!response.ok) return;
+        
+        const list = await response.json();
+        isInList = list.some(item => item.id === parseInt(currentMediaId) && item.media_type === currentMediaType);
+        
+        updateMyListButton();
+    } catch (error) {
+        console.error('[MyList] Error checking status:', error);
+    }
+}
+
+// Update my list button appearance
+function updateMyListButton() {
+    const btn = document.getElementById('myListBtn');
+    const btnText = document.getElementById('myListBtnText');
+    
+    if (!btn || !btnText) return;
+    
+    if (isInList) {
+        btnText.textContent = 'Added';
+        btn.style.background = 'rgba(139, 92, 246, 0.2)';
+        btn.style.borderColor = 'rgba(139, 92, 246, 0.6)';
+    } else {
+        btnText.textContent = 'My List';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+    }
+}
+
+// Toggle my list
+async function toggleMyList() {
+    const btn = document.getElementById('myListBtn');
+    if (!btn) return;
+    
+    // Disable button during operation
+    btn.disabled = true;
+    
+    try {
+        if (isInList) {
+            // Remove from list
+            const response = await fetch('/api/my-list/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: parseInt(currentMediaId) })
+            });
+            
+            if (!response.ok) throw new Error('Failed to remove from list');
+            
+            isInList = false;
+            showNotification('Removed from My List', 'success');
+        } else {
+            // Add to list - get current details from the page
+            const title = document.getElementById('detailsTitle')?.textContent || 'Unknown';
+            const posterImg = document.getElementById('detailsPoster');
+            const posterPath = posterImg ? posterImg.src.split('/w500')[1] : null;
+            const year = document.getElementById('detailsYear')?.textContent || null;
+            const ratingText = document.getElementById('detailsRating')?.textContent || '0';
+            const vote_average = parseFloat(ratingText.replace('⭐', '').trim()) || 0;
+            
+            const item = {
+                id: parseInt(currentMediaId),
+                media_type: currentMediaType,
+                title: title,
+                poster_path: posterPath,
+                year: year,
+                vote_average: vote_average
+            };
+            
+            const response = await fetch('/api/my-list/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+            
+            if (!response.ok) throw new Error('Failed to add to list');
+            
+            isInList = true;
+            showNotification('Added to My List', 'success');
+        }
+        
+        updateMyListButton();
+    } catch (error) {
+        console.error('[MyList] Error toggling:', error);
+        showNotification('Failed to update My List', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'success') {
+    // Reuse existing notification system if available
+    if (window._showingNotification) return;
+    window._showingNotification = true;
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10001;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            notification.remove();
+            window._showingNotification = false;
+        }, 300);
+    }, 2000);
+}
+
+// Initialize my list button
+document.addEventListener('DOMContentLoaded', () => {
+    const myListBtn = document.getElementById('myListBtn');
+    if (myListBtn) {
+        myListBtn.addEventListener('click', toggleMyList);
+    }
+});

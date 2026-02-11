@@ -282,6 +282,10 @@ function hideAllSections() {
     const books = document.getElementById('booksSection');
     if (books) books.style.setProperty('display', 'none', 'important');
     
+    // My List
+    const myList = document.getElementById('myListSection');
+    if (myList) myList.style.setProperty('display', 'none', 'important');
+    
     // Live TV
     const liveTv = document.getElementById('liveTvSection');
     if (liveTv) liveTv.style.setProperty('display', 'none', 'important');
@@ -346,6 +350,8 @@ document.addEventListener('click', (e) => {
             showMangaPage();
         } else if (itemId === 'live-sports') {
             showLiveSportsPage();
+        } else if (itemId === 'my-list') {
+            showMyListPage();
         } else if (itemId === 'media-downloader') {
             showMediaDownloaderPage();
         } else if (itemId === 'music') {
