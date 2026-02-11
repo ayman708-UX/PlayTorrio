@@ -108,16 +108,66 @@ async function searchOnlineBooks(query) {
 // Search Offline Books (LibGen)
 async function searchOfflineBooks(query) {
     try {
-        const res = await fetch(`${BOOKS_API}/otherbook/api/search/${encodeURIComponent(query)}`);
+        const res = await fetch(`http://localhost:6987/libgen/search/${encodeURIComponent(query)}`);
         const data = await res.json();
-        if (data.success && data.books) {
-            return data.books.filter(book => book.fileExtension === 'epub');
+        if (data.results && Array.isArray(data.results)) {
+            // Transform libgen results to match expected format (without fetching download links yet)
+            const transformedBooks = data.results.map((book) => {
+                return {
+                    title: book.title,
+                    author: book.author,
+                    fileExtension: book.format,
+                    fileSize: parseFileSize(book.size),
+                    language: book.language,
+                    year: book.year,
+                    editionId: book.editionId, // Store editionId for later download link fetching
+                    publisher: book.publisher,
+                    pages: book.pages
+                };
+            });
+            return transformedBooks.filter(book => book.fileExtension === 'epub');
         }
         return [];
     } catch (e) {
         console.error('[Books] Offline search failed:', e);
         return [];
     }
+}
+
+// Get download link for a book (called when download button is clicked)
+async function getBookDownloadLink(editionId) {
+    try {
+        const editionRes = await fetch(`http://localhost:6987/libgen/edition/${editionId}`);
+        const editionData = await editionRes.json();
+        if (editionData.md5) {
+            const downloadRes = await fetch(`http://localhost:6987/libgen/download/${editionData.md5}`);
+            const downloadData = await downloadRes.json();
+            return downloadData.downloadUrl || '';
+        }
+        return '';
+    } catch (err) {
+        console.error('[Books] Failed to get download link:', err);
+        return '';
+    }
+}
+
+// Helper function to parse file size string to bytes
+function parseFileSize(sizeStr) {
+    if (!sizeStr) return 0;
+    const match = sizeStr.match(/([\d.]+)\s*([A-Z]+)/i);
+    if (!match) return 0;
+    
+    const value = parseFloat(match[1]);
+    const unit = match[2].toUpperCase();
+    
+    const units = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024 * 1024,
+        'GB': 1024 * 1024 * 1024
+    };
+    
+    return Math.round(value * (units[unit] || 1));
 }
 
 // Get library books
@@ -188,34 +238,28 @@ function formatFileSize(bytes) {
 
 // Get epub download path - expand environment variables
 async function getEpubDownloadPath() {
+    // Try to get the actual path from Electron
+    if (window.electronAPI?.getEpubFolder) {
+        try {
+            const result = await window.electronAPI.getEpubFolder();
+            if (result && result.success && result.path) {
+                return result.path;
+            }
+        } catch (error) {
+            console.warn('Failed to get epub folder from Electron:', error);
+        }
+    }
+    
+    // Fallback to generic paths
     const platform = navigator.platform.toLowerCase();
     const userAgent = navigator.userAgent.toLowerCase();
     
     if (platform.includes('win') || userAgent.includes('windows')) {
-        // Windows: Get actual AppData path
-        if (window.electronAPI?.getPath) {
-            const appData = await window.electronAPI.getPath('appData');
-            return `${appData}\\PlayTorrio\\epub`;
-        }
-        // Fallback - get username from environment or path
-        const username = process.env.USERNAME || process.env.USER || 'User';
-        return `C:\\Users\\${username}\\AppData\\Roaming\\PlayTorrio\\epub`;
+        return '%APPDATA%\\PlayTorrio\\epub';
     } else if (platform.includes('mac') || userAgent.includes('mac')) {
-        // macOS
-        if (window.electronAPI?.getPath) {
-            const home = await window.electronAPI.getPath('home');
-            return `${home}/Library/Application Support/PlayTorrio/epub`;
-        }
-        const username = process.env.USER || 'User';
-        return `/Users/${username}/Library/Application Support/PlayTorrio/epub`;
+        return '~/Library/Application Support/PlayTorrio/epub';
     } else {
-        // Linux
-        if (window.electronAPI?.getPath) {
-            const home = await window.electronAPI.getPath('home');
-            return `${home}/.config/PlayTorrio/epub`;
-        }
-        const username = process.env.USER || 'User';
-        return `/home/${username}/.config/PlayTorrio/epub`;
+        return '~/.config/PlayTorrio/epub';
     }
 }
 
@@ -327,8 +371,23 @@ function renderBooks(books) {
                 </div>
             `;
             
-            card.querySelector('.download-btn').addEventListener('click', () => {
-                showDownloadModal(book);
+            card.querySelector('.download-btn').addEventListener('click', async () => {
+                const btn = card.querySelector('.download-btn');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner-small"></div> Getting link...';
+                
+                // Fetch download link when button is clicked
+                const downloadlink = await getBookDownloadLink(book.editionId);
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                if (downloadlink) {
+                    showDownloadModal({ ...book, downloadlink });
+                } else {
+                    alert('Failed to get download link. Please try again.');
+                }
             });
         } else {
             // Library mode

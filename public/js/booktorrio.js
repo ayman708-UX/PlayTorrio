@@ -169,8 +169,23 @@
         `;
         
         // Handle download click - show modal
-        card.querySelector('.download-btn').addEventListener('click', () => {
-            showDownloadModal(book);
+        card.querySelector('.download-btn').addEventListener('click', async () => {
+            const btn = card.querySelector('.download-btn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting link...';
+            
+            // Fetch download link when button is clicked
+            const downloadlink = await getBookDownloadLink(book.editionId);
+            
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            
+            if (downloadlink) {
+                showDownloadModal({ ...book, downloadlink });
+            } else {
+                alert('Failed to get download link. Please try again.');
+            }
         });
         
         return card;
@@ -220,15 +235,30 @@
             loadingDiv.style.display = 'block';
             resultsContainer.innerHTML = '';
 
-            const response = await fetch(`http://localhost:6987/otherbook/api/search/${encodeURIComponent(query)}`);
+            const response = await fetch(`http://localhost:6987/libgen/search/${encodeURIComponent(query)}`);
             if (!response.ok) throw new Error('Search failed');
 
             const data = await response.json();
             loadingDiv.style.display = 'none';
 
-            if (data.books && data.books.length > 0) {
+            if (data.results && data.results.length > 0) {
+                // Transform libgen results to match expected format (without fetching download links yet)
+                const transformedBooks = data.results.map((book) => {
+                    return {
+                        title: book.title,
+                        author: book.author,
+                        fileExtension: book.format,
+                        fileSize: parseFileSize(book.size),
+                        language: book.language,
+                        year: book.year,
+                        editionId: book.editionId, // Store editionId for later download link fetching
+                        publisher: book.publisher,
+                        pages: book.pages
+                    };
+                });
+
                 // Filter to show only EPUB files
-                const epubBooks = data.books.filter(book => 
+                const epubBooks = transformedBooks.filter(book => 
                     book.fileExtension && book.fileExtension.toLowerCase() === 'epub'
                 );
 
@@ -268,6 +298,42 @@
                 </div>
             `;
         }
+    }
+
+    // Get download link for a book (called when download button is clicked)
+    async function getBookDownloadLink(editionId) {
+        try {
+            const editionRes = await fetch(`http://localhost:6987/libgen/edition/${editionId}`);
+            const editionData = await editionRes.json();
+            if (editionData.md5) {
+                const downloadRes = await fetch(`http://localhost:6987/libgen/download/${editionData.md5}`);
+                const downloadData = await downloadRes.json();
+                return downloadData.downloadUrl || '';
+            }
+            return '';
+        } catch (err) {
+            console.error('[BookTorrio] Failed to get download link:', err);
+            return '';
+        }
+    }
+
+    // Helper function to parse file size string to bytes
+    function parseFileSize(sizeStr) {
+        if (!sizeStr) return 0;
+        const match = sizeStr.match(/([\d.]+)\s*([A-Z]+)/i);
+        if (!match) return 0;
+        
+        const value = parseFloat(match[1]);
+        const unit = match[2].toUpperCase();
+        
+        const units = {
+            'B': 1,
+            'KB': 1024,
+            'MB': 1024 * 1024,
+            'GB': 1024 * 1024 * 1024
+        };
+        
+        return Math.round(value * (units[unit] || 1));
     }
 
     // Load EPUB library

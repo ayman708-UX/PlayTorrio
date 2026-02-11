@@ -5847,6 +5847,226 @@ app.get("/comics-proxy", async (req, res) => {
 
 
 // ============================================================================
+// LIBGEN SERVICE
+// ============================================================================
+
+// Search endpoint - /libgen/search/:query
+app.get('/libgen/search/:query', async (req, res) => {
+    try {
+        const query = req.params.query;
+        if (!query) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+
+        console.log(`[LIBGEN] Searching for: ${query}`);
+        
+        const searchUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}&curtab=f`;
+        console.log(`[LIBGEN] URL: ${searchUrl}`);
+        
+        const axiosInstance = createAxiosInstance();
+        
+        const response = await axiosInstance.get(searchUrl);
+        const $ = cheerio.load(response.data);
+        
+        const results = [];
+        
+        // Parse the table rows - libgen uses different table structures
+        $('table tbody tr, table tr').each((index, element) => {
+            const $row = $(element);
+            const $tds = $row.find('td');
+            
+            // Skip header rows and rows with insufficient columns
+            if ($tds.length < 8) return;
+            
+            // Extract data from the first td (title, series, ISBN)
+            const $firstTd = $tds.eq(0);
+            
+            // Find the title link
+            const $titleLink = $firstTd.find('a[href*="edition.php"]').first();
+            if (!$titleLink.length) return; // Skip if no title link
+            
+            const title = $titleLink.text().trim();
+            if (!title) return;
+            
+            const editionHref = $titleLink.attr('href');
+            const editionId = editionHref ? editionHref.match(/id=(\d+)/)?.[1] : null;
+            if (!editionId) return;
+            
+            // Get series info from the bold tag
+            const series = $firstTd.find('b').first().text().trim();
+            
+            // Get ISBN from the green font
+            const isbn = $firstTd.find('font[color="green"]').text().trim();
+            
+            // Get file info badge
+            const fileId = $firstTd.find('.badge-secondary').text().trim();
+            
+            // Extract other fields
+            const author = $tds.eq(1).text().trim();
+            const publisher = $tds.eq(2).text().trim();
+            const year = $tds.eq(3).text().trim();
+            const language = $tds.eq(4).text().trim();
+            const pages = $tds.eq(5).text().trim();
+            const size = $tds.eq(6).find('a').text().trim() || $tds.eq(6).text().trim();
+            const format = $tds.eq(7).text().trim();
+            
+            // Get download links from the last td
+            const $downloadTd = $tds.eq(8);
+            const downloadLinks = [];
+            $downloadTd.find('a').each((i, link) => {
+                const $link = $(link);
+                const href = $link.attr('href');
+                const linkTitle = $link.attr('data-original-title') || $link.find('.badge').text().trim();
+                if (href) {
+                    downloadLinks.push({ title: linkTitle, href });
+                }
+            });
+            
+            // Only include epub files
+            if (format.toLowerCase() === 'epub' && title && editionId) {
+                results.push({
+                    title,
+                    series,
+                    author,
+                    publisher,
+                    year,
+                    language,
+                    pages,
+                    size,
+                    format,
+                    isbn,
+                    editionId,
+                    editionUrl: `https://libgen.li/edition.php?id=${editionId}`,
+                    fileId,
+                    downloadLinks
+                });
+            }
+        });
+        
+        console.log(`[LIBGEN] Found ${results.length} epub results`);
+        
+        res.json({
+            query,
+            totalResults: results.length,
+            results
+        });
+        
+    } catch (error) {
+        console.error('[LIBGEN] Search error:', error.message);
+        res.status(500).json({
+            error: 'Failed to search libgen',
+            message: error.message
+        });
+    }
+});
+
+// Get edition details and MD5 hash - /libgen/edition/:editionId
+app.get('/libgen/edition/:editionId', async (req, res) => {
+    try {
+        const { editionId } = req.params;
+        if (!editionId) {
+            return res.status(400).json({ error: 'Edition ID is required' });
+        }
+
+        console.log(`[LIBGEN] Fetching edition: ${editionId}`);
+        
+        const editionUrl = `https://libgen.li/edition.php?id=${editionId}`;
+        const axiosInstance = createAxiosInstance();
+        
+        const response = await axiosInstance.get(editionUrl);
+        const $ = cheerio.load(response.data);
+        
+        // Extract MD5 hash from the download link
+        const adsLink = $('a[href^="ads.php?md5="]').first().attr('href');
+        const md5 = adsLink ? adsLink.match(/md5=([a-f0-9]+)/)?.[1] : null;
+        
+        if (!md5) {
+            return res.status(404).json({ error: 'MD5 hash not found for this edition' });
+        }
+        
+        // Extract file info
+        const fileInfo = {};
+        $('table#tablelibgen tr').each((i, row) => {
+            const $row = $(row);
+            const $tds = $row.find('td');
+            
+            if ($tds.length >= 2) {
+                const text = $tds.eq(1).text();
+                
+                // Extract size
+                const sizeMatch = text.match(/Size:\s*([^\s]+\s+[^\s]+)/);
+                if (sizeMatch) fileInfo.size = sizeMatch[1].trim();
+                
+                // Extract extension
+                const extMatch = text.match(/Extension:\s*(\w+)/);
+                if (extMatch) fileInfo.extension = extMatch[1].trim();
+                
+                // Extract pages
+                const pagesMatch = text.match(/Pages:\s*(\d+)/);
+                if (pagesMatch) fileInfo.pages = pagesMatch[1].trim();
+            }
+        });
+        
+        console.log(`[LIBGEN] Found MD5: ${md5}`);
+        
+        res.json({
+            editionId,
+            md5,
+            adsUrl: `https://libgen.li/ads.php?md5=${md5}`,
+            fileInfo
+        });
+        
+    } catch (error) {
+        console.error('[LIBGEN] Edition fetch error:', error.message);
+        res.status(500).json({
+            error: 'Failed to fetch edition details',
+            message: error.message
+        });
+    }
+});
+
+// Get download link - /libgen/download/:md5
+app.get('/libgen/download/:md5', async (req, res) => {
+    try {
+        const { md5 } = req.params;
+        if (!md5) {
+            return res.status(400).json({ error: 'MD5 hash is required' });
+        }
+
+        console.log(`[LIBGEN] Fetching download link for MD5: ${md5}`);
+        
+        const adsUrl = `https://libgen.li/ads.php?md5=${md5}`;
+        const axiosInstance = createAxiosInstance();
+        
+        const response = await axiosInstance.get(adsUrl);
+        const $ = cheerio.load(response.data);
+        
+        // Extract the GET link from the table
+        const downloadLink = $('table#main a[href^="get.php"]').first().attr('href');
+        
+        if (!downloadLink) {
+            return res.status(404).json({ error: 'Download link not found' });
+        }
+        
+        const fullDownloadUrl = `https://libgen.li/${downloadLink}`;
+        
+        console.log(`[LIBGEN] Found download link: ${fullDownloadUrl}`);
+        
+        res.json({
+            md5,
+            downloadUrl: fullDownloadUrl
+        });
+        
+    } catch (error) {
+        console.error('[LIBGEN] Download link fetch error:', error.message);
+        res.status(500).json({
+            error: 'Failed to fetch download link',
+            message: error.message
+        });
+    }
+});
+
+// ============================================================================
 // ERROR HANDLERS & SERVER STARTUP
 // ============================================================================
 
