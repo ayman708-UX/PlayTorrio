@@ -1222,8 +1222,6 @@ function openInNodeMPVPlayer(win, streamUrl, startSeconds, metadata = {}) {
         mpvWindow = new BrowserWindow({
             width: 1280,
             height: 720,
-            minWidth: 640,
-            minHeight: 360,
             show: false,
             frame: false,
             transparent: true,
@@ -1781,8 +1779,6 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1440,
         height: 900,
-        minWidth: 1200,
-        minHeight: 800,
         // Frameless on all platforms for custom title bar
         frame: false,
         titleBarStyle: 'hidden',

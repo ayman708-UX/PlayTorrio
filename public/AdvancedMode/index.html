@@ -184,6 +184,14 @@
                         <span class="nav-label">Music</span>
                     </button>
                 </li>
+                <li class="nav-item" data-id="play-magnet">
+                    <button class="nav-btn">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </span>
+                        <span class="nav-label">Play Magnet</span>
+                    </button>
+                </li>
                 <li class="nav-item" data-id="media-downloader">
                     <button class="nav-btn">
                         <span class="nav-icon">
@@ -549,6 +557,77 @@
             </div>
         </div>
     </div>
+
+    <!-- Play Magnet Modal -->
+    <div id="play-magnet-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 20px; color: #fff; font-size: 24px;">Play Magnet Link</h2>
+            <textarea 
+                id="magnet-link-input" 
+                placeholder="Paste your magnet link here..."
+                style="width: 100%; min-height: 150px; padding: 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-family: monospace; font-size: 14px; resize: vertical;"
+            ></textarea>
+            <div style="display: flex; gap: 12px; margin-top: 20px; justify-content: flex-end;">
+                <button id="magnet-cancel-btn" style="padding: 12px 28px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; cursor: pointer; font-size: 15px; transition: all 0.2s;">
+                    Cancel
+                </button>
+                <button id="magnet-play-btn" style="padding: 12px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s;">
+                    Get Files
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Selection Modal -->
+    <div id="file-selection-modal" class="modal-overlay" style="display: none; z-index: 99999;">
+        <div class="modal-content" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; margin: 0; border-radius: 0; background: #0a0a0f; display: flex; flex-direction: column; z-index: 99999;">
+            <!-- Header with Back Button -->
+            <div style="display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+                <button id="file-modal-back-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: all 0.2s;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back
+                </button>
+                <h2 style="color: #fff; font-size: 24px; margin: 0; flex: 1;">Select File to Play</h2>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="file-loading-state" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+                <div style="width: 60px; height: 60px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="color: rgba(255,255,255,0.7); font-size: 16px;">Fetching torrent metadata...</p>
+            </div>
+            
+            <!-- File List Container -->
+            <div id="file-list-container" style="flex: 1; overflow-y: auto; padding: 24px; display: none;">
+                <!-- Files will be inserted here -->
+            </div>
+            
+            <!-- Action Buttons -->
+            <div id="file-modal-actions" style="display: none; gap: 12px; justify-content: flex-end; padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+                <button id="file-copy-link-btn" style="padding: 14px 32px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; color: #3b82f6; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s;">
+                    Copy Link
+                </button>
+                <button id="file-play-btn" style="padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s;">
+                    Play
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #file-selection-modal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+        }
+    </style>
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/streaming.css">

@@ -448,8 +448,14 @@ function initDOMRefs() {
 
 // Show notification
 function showNotification(message, type = 'info') {
-    // Use existing notification system if available
-    if (window.showNotification) {
+    // Prevent infinite recursion
+    if (window._showingNotification) {
+        console.log(`[${type}] ${message}`);
+        return;
+    }
+    
+    // Use existing notification system if available (but not ourselves)
+    if (typeof window.showNotification === 'function' && window.showNotification !== showNotification) {
         window.showNotification(message, type);
     } else {
         console.log(`[${type}] ${message}`);

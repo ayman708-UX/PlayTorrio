@@ -31,7 +31,6 @@ function createLiveTvSection() {
                 frameborder="0" 
                 allowfullscreen
                 allow="autoplay; fullscreen; picture-in-picture"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock allow-top-navigation"
             ></iframe>
         </div>
     `;
