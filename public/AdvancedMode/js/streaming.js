@@ -1,7 +1,7 @@
 // Streaming Mode - Stream Extraction & Player (HLS.js based)
 let streamingModeEnabled = true;
 let streamingModeLoaded = false; // Track if setting has been loaded
-let currentProvider = 'videasy';
+let currentProvider = 'vidfast';
 let currentStreamUrl = null;
 let previousStreamUrl = null; // Store previous stream for cancel fallback
 let previousProvider = null; // Store previous provider for cancel fallback
@@ -72,8 +72,23 @@ async function saveStreamingModeSetting(enabled) {
 // Initialize streaming mode (async) - await this before checking enabled()
 const streamingModeReady = loadStreamingModeSetting();
 
-// Provider URLs
+// Provider URLs (ordered by priority: vidfast first)
 const PROVIDERS = {
+    vidfast: {
+        name: 'Vidfast',
+        movie: (tmdbId) => `https://vidfast.pro/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidfast.pro/tv/${tmdbId}/${season}/${episode}`
+    },
+    vixsrc: {
+        name: 'VixSrc',
+        movie: (tmdbId) => `https://vixsrc.to/movie/${tmdbId}/`,
+        tv: (tmdbId, season, episode) => `https://vixsrc.to/tv/${tmdbId}/${season}/${episode}/`
+    },
+    vidlink: {
+        name: 'Vidlink',
+        movie: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`
+    },
     videasy: {
         name: 'Videasy',
         movie: (tmdbId) => `https://player.videasy.net/movie/${tmdbId}`,
@@ -88,16 +103,6 @@ const PROVIDERS = {
         name: 'CineSrc',
         movie: (tmdbId) => `https://cinesrc.st/embed/movie/${tmdbId}`,
         tv: (tmdbId, season, episode) => `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`
-    },
-    vidfast: {
-        name: 'Vidfast',
-        movie: (tmdbId) => `https://vidfast.pro/movie/${tmdbId}`,
-        tv: (tmdbId, season, episode) => `https://vidfast.pro/tv/${tmdbId}/${season}/${episode}`
-    },
-    vidlink: {
-        name: 'Vidlink',
-        movie: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}`,
-        tv: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`
     },
     flixer: {
         name: 'Flixer',
@@ -574,7 +579,7 @@ async function playStream(type, tmdbId, posterUrl, title, season = null, episode
     // Define provider priority order: videasy, vidlink, vidfast, then others, anitaro last
     if (!providerOrder) {
         const allProviders = Object.keys(PROVIDERS);
-        providerOrder = ['videasy', 'vidlink', 'vidfast'];
+        providerOrder = ['vidfast', 'vixsrc', 'vidlink', 'videasy'];
         
         // Add remaining providers except anitaro
         allProviders.forEach(p => {
@@ -804,6 +809,24 @@ function loadStreamIntoPlayer(streamUrl, title) {
             backBufferLength: 90,
             maxBufferLength: 30,
             maxMaxBufferLength: 600
+        });
+        
+        // Filter out subtitle tracks before loading
+        streamHls.on(Hls.Events.MANIFEST_LOADING, () => {
+            console.log('[Player] Manifest loading...');
+        });
+        
+        streamHls.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
+            console.log('[Player] Manifest loaded, filtering subtitle tracks...');
+            // Remove subtitle tracks from the manifest
+            if (data.subtitleTracks) {
+                console.log('[Player] Removing', data.subtitleTracks.length, 'subtitle tracks');
+                data.subtitleTracks = [];
+            }
+            if (data.subtitles) {
+                console.log('[Player] Removing subtitle data');
+                data.subtitles = [];
+            }
         });
         
         console.log('[Player] Loading source:', streamUrl);
@@ -1426,6 +1449,13 @@ function updateQualityButtonVisibility() {
 async function changeProvider(provider) {
     if (provider === currentProvider) return;
     
+    // Validate provider exists
+    if (!PROVIDERS[provider]) {
+        console.error('[StreamingMode] Invalid provider:', provider);
+        alert(`Provider "${provider}" is not available`);
+        return;
+    }
+    
     const oldProvider = currentProvider;
     const oldStreamUrl = currentStreamUrl;
     
@@ -1436,6 +1466,44 @@ async function changeProvider(provider) {
     // Save to localStorage for persistence
     if (video && window.currentMediaInfo) {
         savePlaybackPosition(video.currentTime);
+    }
+    
+    // CLEANUP: Destroy HLS/DASH instances and close extraction window
+    console.log('[StreamingMode] Cleaning up before provider switch...');
+    
+    // Pause and clear video
+    if (video) {
+        video.pause();
+        video.src = '';
+        video.load();
+    }
+    
+    // Destroy HLS instance
+    if (streamHls) {
+        try {
+            console.log('[StreamingMode] Destroying HLS instance');
+            streamHls.destroy();
+        } catch (e) {
+            console.log('[StreamingMode] Error destroying HLS:', e);
+        }
+        streamHls = null;
+    }
+    
+    // Destroy DASH instance
+    if (streamDash) {
+        try {
+            console.log('[StreamingMode] Destroying DASH instance');
+            streamDash.reset();
+        } catch (e) {
+            console.log('[StreamingMode] Error destroying DASH:', e);
+        }
+        streamDash = null;
+    }
+    
+    // Close extraction window
+    if (window.electronAPI && window.electronAPI.closeStreamExtraction) {
+        console.log('[StreamingMode] Closing extraction window');
+        window.electronAPI.closeStreamExtraction();
     }
     
     currentProvider = provider;
@@ -1466,11 +1534,6 @@ async function changeProvider(provider) {
         const { type, tmdbId, posterUrl, title, season, episode } = window.currentMediaInfo;
         
         console.log('[StreamingMode] Reloading stream with new provider...');
-        
-        // Pause video first
-        if (video) {
-            video.pause();
-        }
         
         // Hide player, show loading
         playerContainer.classList.remove('active');
@@ -1679,6 +1742,209 @@ function initPlayerControls() {
             if (settingsMenu) settingsMenu.classList.remove('visible');
             if (qualityMenu) qualityMenu.classList.remove('visible');
         });
+    }
+    
+    // Cast button
+    const castBtn = document.getElementById('stream-cast-btn');
+    if (castBtn) {
+        const newCastBtn = castBtn.cloneNode(true);
+        castBtn.parentNode.replaceChild(newCastBtn, castBtn);
+        
+        newCastBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!currentStreamUrl) {
+                alert('No stream loaded');
+                return;
+            }
+            
+            console.log('[Cast] Starting cast process...');
+            console.log('[Cast] Current stream URL:', currentStreamUrl);
+            
+            // Show cast modal with subtitle selection
+            const modal = document.getElementById('castDeviceModal');
+            const subtitleSelection = document.getElementById('castSubtitleSelection');
+            const deviceSelection = document.getElementById('castDeviceSelection');
+            const subtitleList = document.getElementById('castSubtitleList');
+            const continueBtn = document.getElementById('castContinueBtn');
+            const cancelBtn1 = document.getElementById('castCancelBtn1');
+            const cancelBtn2 = document.getElementById('castCancelBtn2');
+            
+            if (!modal || !subtitleSelection || !deviceSelection) return;
+            
+            // Show modal with subtitle selection
+            modal.style.display = 'flex';
+            subtitleSelection.style.display = 'block';
+            deviceSelection.style.display = 'none';
+            
+            // Populate subtitle list
+            subtitleList.innerHTML = '<div class="cast-subtitle-item selected" data-subtitle-index="-1"><span>No Subtitles</span></div>';
+            
+            if (currentSubtitles && currentSubtitles.length > 0) {
+                currentSubtitles.forEach((sub, index) => {
+                    const subItem = document.createElement('div');
+                    subItem.className = 'cast-subtitle-item';
+                    subItem.dataset.subtitleIndex = index;
+                    subItem.innerHTML = `<span>${sub.display || sub.language || `Subtitle ${index + 1}`}</span>`;
+                    
+                    subItem.onclick = () => {
+                        document.querySelectorAll('.cast-subtitle-item').forEach(item => item.classList.remove('selected'));
+                        subItem.classList.add('selected');
+                    };
+                    
+                    subtitleList.appendChild(subItem);
+                });
+            }
+            
+            // Handle subtitle item clicks
+            document.querySelectorAll('.cast-subtitle-item').forEach(item => {
+                item.onclick = () => {
+                    document.querySelectorAll('.cast-subtitle-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                };
+            });
+            
+            // Close modal function
+            const closeModal = () => {
+                modal.style.display = 'none';
+                subtitleSelection.style.display = 'none';
+                deviceSelection.style.display = 'none';
+            };
+            
+            // Cancel buttons
+            cancelBtn1.onclick = closeModal;
+            cancelBtn2.onclick = closeModal;
+            modal.onclick = (e) => {
+                if (e.target === modal) closeModal();
+            };
+            
+            // Continue button - show device selection
+            continueBtn.onclick = async () => {
+                // Get selected subtitle
+                const selectedItem = document.querySelector('.cast-subtitle-item.selected');
+                const selectedIndex = selectedItem ? parseInt(selectedItem.dataset.subtitleIndex) : -1;
+                
+                console.log('[Cast] Selected subtitle index:', selectedIndex);
+                
+                // Show device selection
+                subtitleSelection.style.display = 'none';
+                deviceSelection.style.display = 'block';
+                
+                const deviceList = document.getElementById('castDeviceList');
+                deviceList.innerHTML = '<div class="cast-loading">Searching for Chromecast devices...</div>';
+                
+                try {
+                    // Discover Chromecast devices
+                    const discovery = await window.electronAPI.discoverChromecastDevices();
+                    
+                    if (!discovery.success || !discovery.devices || discovery.devices.length === 0) {
+                        deviceList.innerHTML = '<div class="cast-loading">No Chromecast devices found.<br><br>Make sure your Chromecast is on the same WiFi network.</div>';
+                        return;
+                    }
+                    
+                    console.log('[Cast] Found devices:', discovery.devices);
+                    
+                    // Show device list
+                    deviceList.innerHTML = '';
+                    discovery.devices.forEach((device, index) => {
+                        const deviceItem = document.createElement('div');
+                        deviceItem.className = 'cast-device-item';
+                        deviceItem.innerHTML = `
+                            <div class="cast-device-name">${device.name || `Device ${index + 1}`}</div>
+                            <div class="cast-device-host">${device.host}</div>
+                        `;
+                        
+                        deviceItem.onclick = async () => {
+                            closeModal();
+                            await castToDevice(device.host, device.name, selectedIndex);
+                        };
+                        
+                        deviceList.appendChild(deviceItem);
+                    });
+                    
+                } catch (error) {
+                    console.error('[Cast] Discovery error:', error);
+                    deviceList.innerHTML = `<div class="cast-loading">Error discovering devices:<br>${error.message}</div>`;
+                }
+            };
+        });
+    }
+    
+    // Cast to device function
+    async function castToDevice(deviceHost, deviceName, selectedSubtitleIndex = -1) {
+        try {
+            console.log('[Cast] Casting to:', deviceName, deviceHost);
+            console.log('[Cast] Selected subtitle index:', selectedSubtitleIndex);
+            
+            // Extract the actual stream URL (remove localhost proxy)
+            let actualStreamUrl = currentStreamUrl;
+            if (currentStreamUrl.includes('localhost:8765/stream-proxy?url=')) {
+                const urlMatch = currentStreamUrl.match(/url=([^&]+)/);
+                if (urlMatch) {
+                    actualStreamUrl = decodeURIComponent(urlMatch[1]);
+                }
+            }
+            
+            console.log('[Cast] Actual stream URL:', actualStreamUrl);
+            
+            // Prepare metadata
+            const metadata = {
+                title: window.currentMediaInfo?.title || 'PlayTorrio Stream',
+                contentType: actualStreamUrl.includes('.m3u8') ? 'application/x-mpegURL' : 'video/mp4',
+                images: window.currentMediaInfo?.posterUrl ? [
+                    { url: window.currentMediaInfo.posterUrl }
+                ] : []
+            };
+            
+            // Prepare subtitle options
+            const subtitleOptions = {};
+            if (window.currentMediaInfo) {
+                subtitleOptions.tmdbId = window.currentMediaInfo.tmdbId;
+                subtitleOptions.type = window.currentMediaInfo.type;
+                if (window.currentMediaInfo.season) {
+                    subtitleOptions.season = window.currentMediaInfo.season;
+                    subtitleOptions.episode = window.currentMediaInfo.episode;
+                }
+            }
+            
+            // Add selected subtitle or all subtitles
+            if (selectedSubtitleIndex >= 0 && currentSubtitles && currentSubtitles[selectedSubtitleIndex]) {
+                // Send only the selected subtitle
+                const selectedSub = currentSubtitles[selectedSubtitleIndex];
+                subtitleOptions.subtitles = [{
+                    url: selectedSub.url,
+                    language: selectedSub.language,
+                    display: selectedSub.display
+                }];
+                console.log('[Cast] Sending selected subtitle:', selectedSub.display);
+            } else if (selectedSubtitleIndex === -1) {
+                // No subtitles selected
+                subtitleOptions.subtitles = [];
+                console.log('[Cast] No subtitles selected');
+            }
+            
+            console.log('[Cast] Metadata:', metadata);
+            console.log('[Cast] Subtitle options:', subtitleOptions);
+            console.log('[Cast] Sending to device:', deviceHost);
+            
+            // Cast to device
+            const result = await window.electronAPI.castToChromecast({
+                streamUrl: actualStreamUrl,
+                metadata: metadata,
+                deviceHost: deviceHost,
+                subtitleOptions: subtitleOptions
+            });
+            
+            console.log('[Cast] Result:', result);
+            
+            if (!result.success) {
+                alert(`Failed to cast: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('[Cast] Error:', error);
+            alert(`Cast error: ${error.message}`);
+        }
     }
     
     // Provider buttons inside settings menu
@@ -2038,8 +2304,48 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressWrapper) {
             progressWrapper.style.cursor = 'pointer';
             
+            const seekPreviewTooltip = document.getElementById('seek-preview-tooltip');
+            const seekPreviewTime = seekPreviewTooltip?.querySelector('.seek-preview-time');
+            const progressContainer = progressWrapper.querySelector('.stream-progress-container');
+            
+            // Show seek preview on hover
+            progressWrapper.addEventListener('mousemove', (e) => {
+                if (!progressContainer || !seekPreviewTooltip || !video.duration) return;
+                
+                const rect = progressContainer.getBoundingClientRect();
+                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const seekTime = percent * video.duration;
+                
+                // Position tooltip centered above mouse cursor
+                const mouseX = e.clientX - rect.left;
+                seekPreviewTooltip.style.left = mouseX + 'px';
+                seekPreviewTooltip.style.transform = 'translateX(-50%)';
+                seekPreviewTooltip.style.display = 'block';
+                
+                // Update time display
+                if (seekPreviewTime) {
+                    const formatTime = (seconds) => {
+                        const h = Math.floor(seconds / 3600);
+                        const m = Math.floor((seconds % 3600) / 60);
+                        const s = Math.floor(seconds % 60);
+                        if (h > 0) {
+                            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                        }
+                        return `${m}:${s.toString().padStart(2, '0')}`;
+                    };
+                    seekPreviewTime.textContent = formatTime(seekTime);
+                }
+            });
+            
+            // Hide tooltip when mouse leaves
+            progressWrapper.addEventListener('mouseleave', () => {
+                if (seekPreviewTooltip) {
+                    seekPreviewTooltip.style.display = 'none';
+                }
+            });
+            
+            // Seek on click
             progressWrapper.addEventListener('click', (e) => {
-                const progressContainer = progressWrapper.querySelector('.stream-progress-container');
                 if (!progressContainer) return;
                 
                 const rect = progressContainer.getBoundingClientRect();
@@ -2077,6 +2383,116 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         initSubtitleCustomization();
     }, 1000);
+    
+    // Add keyboard shortcuts (global - no need to focus on player)
+    document.addEventListener('keydown', (e) => {
+        const playerContainer = document.getElementById('stream-player-container');
+        const video = document.getElementById('stream-video');
+        
+        // Only handle shortcuts when player is active
+        if (!playerContainer || !playerContainer.classList.contains('active') || !video) {
+            return;
+        }
+        
+        // Don't handle shortcuts when typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        
+        switch(e.key.toLowerCase()) {
+            case ' ':
+            case 'k':
+                // Space or K: Play/Pause
+                e.preventDefault();
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+                break;
+                
+            case 'arrowleft':
+                // Left arrow: Rewind 5 seconds
+                e.preventDefault();
+                video.currentTime = Math.max(0, video.currentTime - 5);
+                break;
+                
+            case 'arrowright':
+                // Right arrow: Forward 5 seconds
+                e.preventDefault();
+                video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                break;
+                
+            case 'j':
+                // J: Rewind 10 seconds
+                e.preventDefault();
+                video.currentTime = Math.max(0, video.currentTime - 10);
+                break;
+                
+            case 'l':
+                // L: Forward 10 seconds
+                e.preventDefault();
+                video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                break;
+                
+            case 'arrowup':
+                // Up arrow: Volume up 5%
+                e.preventDefault();
+                video.volume = Math.min(1, video.volume + 0.05);
+                const volumeSlider = document.getElementById('stream-volume-slider');
+                if (volumeSlider) volumeSlider.value = Math.round(video.volume * 100);
+                localStorage.setItem('playerVolume', Math.round(video.volume * 100).toString());
+                break;
+                
+            case 'arrowdown':
+                // Down arrow: Volume down 5%
+                e.preventDefault();
+                video.volume = Math.max(0, video.volume - 0.05);
+                const volumeSlider2 = document.getElementById('stream-volume-slider');
+                if (volumeSlider2) volumeSlider2.value = Math.round(video.volume * 100);
+                localStorage.setItem('playerVolume', Math.round(video.volume * 100).toString());
+                break;
+                
+            case 'm':
+                // M: Mute/Unmute
+                e.preventDefault();
+                const volumeBtn = document.getElementById('stream-volume');
+                if (volumeBtn) volumeBtn.click();
+                break;
+                
+            case 'f':
+                // F: Fullscreen
+                e.preventDefault();
+                const fullscreenBtn = document.getElementById('stream-fullscreen');
+                if (fullscreenBtn) fullscreenBtn.click();
+                break;
+                
+            case 'escape':
+                // Escape: Exit fullscreen or close player
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    hideStreamPlayer();
+                }
+                break;
+                
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                // Number keys: Jump to percentage (0 = 0%, 1 = 10%, etc.)
+                e.preventDefault();
+                const percent = parseInt(e.key) / 10;
+                video.currentTime = video.duration * percent;
+                break;
+        }
+    });
 });
 
 // Export functions

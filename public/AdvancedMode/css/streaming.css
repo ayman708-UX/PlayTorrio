@@ -303,6 +303,7 @@
     margin: 0 -10px;
     padding-left: 10px;
     padding-right: 10px;
+    position: relative;
 }
 
 .stream-progress-container {
@@ -329,6 +330,29 @@
 
 .stream-progress-wrapper:hover .stream-progress-bar {
     box-shadow: 0 0 20px #9d4edd;
+}
+
+/* Seek Preview Tooltip */
+.seek-preview-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #9d4edd;
+    border-radius: 6px;
+    padding: 6px 12px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+}
+
+.seek-preview-time {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: monospace;
 }
 
 /* Controls Row */
@@ -958,4 +982,147 @@ input:checked + .toggle-slider:before {
     font-size: 14px;
     font-weight: 600;
     color: #9d4edd;
+}
+
+/* Cast Device Selection Modal */
+.cast-device-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cast-device-modal-content {
+    background: #1a1a2e;
+    border: 2px solid #9d4edd;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.cast-device-modal-content h2 {
+    color: #9d4edd;
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    text-align: center;
+}
+
+.cast-device-list {
+    margin-bottom: 20px;
+}
+
+.cast-loading {
+    text-align: center;
+    color: #ccc;
+    padding: 20px;
+    font-size: 16px;
+}
+
+.cast-device-item {
+    background: rgba(157, 78, 221, 0.1);
+    border: 2px solid rgba(157, 78, 221, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.cast-device-item:hover {
+    background: rgba(157, 78, 221, 0.2);
+    border-color: #9d4edd;
+    transform: translateX(5px);
+}
+
+.cast-device-name {
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.cast-device-host {
+    color: #999;
+    font-size: 14px;
+    font-family: monospace;
+}
+
+.cast-cancel-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #666;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.cast-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #999;
+}
+
+.cast-device-modal-content h3 {
+    color: #9d4edd;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+}
+
+.cast-subtitle-list {
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.cast-subtitle-item {
+    background: rgba(157, 78, 221, 0.1);
+    border: 2px solid rgba(157, 78, 221, 0.3);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: white;
+    font-size: 16px;
+}
+
+.cast-subtitle-item:hover {
+    background: rgba(157, 78, 221, 0.2);
+    border-color: #9d4edd;
+}
+
+.cast-subtitle-item.selected {
+    background: rgba(157, 78, 221, 0.3);
+    border-color: #9d4edd;
+}
+
+.cast-continue-btn {
+    width: 100%;
+    background: #9d4edd;
+    border: 2px solid #9d4edd;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 10px;
+}
+
+.cast-continue-btn:hover {
+    background: #7b2cbf;
+    border-color: #7b2cbf;
 }

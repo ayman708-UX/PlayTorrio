@@ -205,6 +205,34 @@
         </div>
     </div>
 
+    <!-- Cast Device Selection Modal -->
+    <div class="cast-device-modal" id="castDeviceModal" style="display: none;">
+        <div class="cast-device-modal-content">
+            <h2>Cast to Chromecast</h2>
+            
+            <!-- Subtitle Selection (shown first) -->
+            <div id="castSubtitleSelection" style="display: none;">
+                <h3>Select Subtitle (Optional)</h3>
+                <div id="castSubtitleList" class="cast-subtitle-list">
+                    <div class="cast-subtitle-item" data-subtitle-index="-1">
+                        <span>No Subtitles</span>
+                    </div>
+                </div>
+                <button class="cast-continue-btn" id="castContinueBtn">Continue</button>
+                <button class="cast-cancel-btn" id="castCancelBtn1">Cancel</button>
+            </div>
+            
+            <!-- Device Selection (shown after subtitle selection) -->
+            <div id="castDeviceSelection" style="display: none;">
+                <h3>Select Device</h3>
+                <div id="castDeviceList" class="cast-device-list">
+                    <div class="cast-loading">Searching for devices...</div>
+                </div>
+                <button class="cast-cancel-btn" id="castCancelBtn2">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Stream Loading Screen -->
     <div id="stream-loading-screen">
         <div class="loading-content">
@@ -249,6 +277,11 @@
 
         <!-- Custom controls overlay -->
         <div class="stream-controls-overlay">
+            <!-- Seek Preview Tooltip (time only) -->
+            <div id="seek-preview-tooltip" class="seek-preview-tooltip" style="display: none;">
+                <div class="seek-preview-time">00:00</div>
+            </div>
+            
             <div class="stream-progress-wrapper">
                 <div class="stream-progress-container">
                     <div class="stream-progress-bar" id="stream-progress-bar"></div>
@@ -270,6 +303,9 @@
                 <div class="stream-right-controls">
                     <button class="stream-icon-btn" id="stream-quality-btn" title="Quality" style="display: none;">
                         <i class="material-icons">hd</i>
+                    </button>
+                    <button class="stream-icon-btn" id="stream-cast-btn" title="Cast to TV">
+                        <i class="material-icons">cast</i>
                     </button>
                     <button class="stream-icon-btn" id="stream-settings" title="Providers">
                         <i class="material-icons">settings</i>
@@ -301,19 +337,18 @@
                 <span>PROVIDERS</span>
             </div>
             <div class="stream-scrollable-list">
-                <button class="provider-btn active" data-provider="videasy">Videasy</button>
+                <button class="provider-btn active" data-provider="vidfast">Vidfast</button>
+                <button class="provider-btn" data-provider="vixsrc">VixSrc</button>
+                <button class="provider-btn" data-provider="vidlink">Vidlink</button>
+                <button class="provider-btn" data-provider="videasy">Videasy</button>
                 <button class="provider-btn" data-provider="anitaro">Anitaro (4K)</button>
                 <button class="provider-btn" data-provider="cinesrc">CineSrc</button>
-                <button class="provider-btn" data-provider="vidfast">Vidfast</button>
-                <button class="provider-btn" data-provider="vidlink">Vidlink</button>
                 <button class="provider-btn" data-provider="flixer">Flixer</button>
                 <button class="provider-btn" data-provider="vidsrc">VidSrc</button>
                 <button class="provider-btn" data-provider="vidnest">VidNest</button>
                 <button class="provider-btn" data-provider="fmovies">FMovies</button>
                 <button class="provider-btn" data-provider="movies111">111Movies</button>
                 <button class="provider-btn" data-provider="vidzee">Vidzee</button>
-                <button class="provider-btn" data-provider="vidking">VidKing</button>
-                <button class="provider-btn" data-provider="zxcstream">ZXCStream</button>
             </div>
             
             <div class="stream-menu-divider"></div>

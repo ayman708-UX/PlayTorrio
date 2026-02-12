@@ -1,6 +1,7 @@
 import Client from 'castv2-client';
 import mdns from 'mdns-js';
 import fetch from 'node-fetch';
+import os from 'os';
 
 const { DefaultMediaReceiver } = Client;
 
@@ -186,7 +187,62 @@ export function castMedia(host, mediaUrl, metadata = {}, subtitleOptions = {}) {
 
         // Fetch subtitles from Wyzie if we have TMDB/IMDB ID
         let subtitleTracks = [];
-        if (subtitleOptions.tmdbId || subtitleOptions.imdbId) {
+        
+        // First, try to use provided subtitles from the app
+        if (subtitleOptions.subtitles && Array.isArray(subtitleOptions.subtitles) && subtitleOptions.subtitles.length > 0) {
+            console.log(`[Chromecast] Using ${subtitleOptions.subtitles.length} provided subtitles`);
+            
+            // Get the network IP of the computer (not the Chromecast)
+            const os = await import('os');
+            const interfaces = os.networkInterfaces();
+            let computerIP = 'localhost';
+            
+            // Find the network IP on the same subnet as the Chromecast
+            const chromecastIP = host.split(':')[0];
+            const chromecastSubnet = chromecastIP.split('.').slice(0, 3).join('.');
+            
+            for (const name of Object.keys(interfaces)) {
+                for (const iface of interfaces[name]) {
+                    if (iface.family === 'IPv4' && !iface.internal) {
+                        const ifaceSubnet = iface.address.split('.').slice(0, 3).join('.');
+                        if (ifaceSubnet === chromecastSubnet) {
+                            computerIP = iface.address;
+                            break;
+                        }
+                    }
+                }
+                if (computerIP !== 'localhost') break;
+            }
+            
+            console.log(`[Chromecast] Computer IP for subtitles: ${computerIP}`);
+            
+            let trackId = 1;
+            for (const sub of subtitleOptions.subtitles) {
+                if (!sub.url) continue;
+                
+                // Chromecast needs WebVTT format
+                // Proxy the subtitle URL through the server to ensure it's accessible and converted to VTT
+                const trackUrl = `http://${computerIP}:6987/api/subtitles/vtt?url=${encodeURIComponent(sub.url)}`;
+                
+                console.log(`[Chromecast] Subtitle ${trackId}:`);
+                console.log(`[Chromecast]   - Name: ${sub.display || sub.language}`);
+                console.log(`[Chromecast]   - Original URL: ${sub.url.substring(0, 80)}...`);
+                console.log(`[Chromecast]   - Network URL: ${trackUrl.substring(0, 100)}...`);
+                
+                subtitleTracks.push({
+                    trackId: trackId++,
+                    type: 'TEXT',
+                    trackContentId: trackUrl,
+                    trackContentType: 'text/vtt',
+                    name: sub.display || sub.language || `Subtitle ${trackId}`,
+                    language: sub.language || 'en',
+                    subtype: 'SUBTITLES'
+                });
+            }
+            
+            console.log(`[Chromecast] Prepared ${subtitleTracks.length} subtitle tracks from provided subtitles`);
+        } else if (subtitleOptions.tmdbId || subtitleOptions.imdbId) {
+            // Fallback: Fetch from Wyzie if no subtitles provided
             try {
                 subtitleTracks = await fetchWyzieSubtitles(subtitleOptions);
             } catch (e) {
@@ -205,6 +261,9 @@ export function castMedia(host, mediaUrl, metadata = {}, subtitleOptions = {}) {
 
                 console.log(`[Chromecast] DefaultMediaReceiver launched`);
 
+                // Determine stream type based on content
+                const isHLS = mediaUrl.includes('.m3u8') || metadata.contentType === 'application/x-mpegURL';
+                
                 const media = {
                     contentId: mediaUrl,
                     contentType: metadata.contentType || 'video/mp4',
@@ -216,11 +275,18 @@ export function castMedia(host, mediaUrl, metadata = {}, subtitleOptions = {}) {
                         images: metadata.images || []
                     }
                 };
+                
+                // For HLS streams, ensure proper content type
+                if (isHLS) {
+                    media.contentType = 'application/x-mpegURL';
+                    console.log(`[Chromecast] Detected HLS stream, using application/x-mpegURL`);
+                }
 
                 // Add subtitle tracks if available
                 if (subtitleTracks.length > 0) {
                     media.tracks = subtitleTracks;
                     console.log(`[Chromecast] Added ${subtitleTracks.length} subtitle tracks`);
+                    console.log(`[Chromecast] Subtitle tracks:`, JSON.stringify(subtitleTracks, null, 2));
                 }
 
                 console.log(`[Chromecast] Loading media:`, media);
@@ -231,21 +297,37 @@ export function castMedia(host, mediaUrl, metadata = {}, subtitleOptions = {}) {
                 // Auto-enable first subtitle track if available
                 if (subtitleTracks.length > 0) {
                     loadOptions.activeTrackIds = [subtitleTracks[0].trackId];
-                    console.log(`[Chromecast] Auto-enabling subtitle: ${subtitleTracks[0].name}`);
+                    console.log(`[Chromecast] Auto-enabling subtitle track ID: ${subtitleTracks[0].trackId} - ${subtitleTracks[0].name}`);
                 }
+                
+                console.log(`[Chromecast] Load options:`, loadOptions);
 
                 player.load(media, loadOptions, (err, status) => {
                     if (err) {
                         console.error(`[Chromecast] Failed to load media:`, err);
+                        console.error(`[Chromecast] Error details:`, JSON.stringify(err, null, 2));
                         client.close();
                         return reject(new Error(`Failed to load media: ${err.message}`));
                     }
 
                     console.log(`[Chromecast] Media loaded successfully`);
                     console.log(`[Chromecast] Status:`, status);
+                    
+                    // Log detailed status
+                    if (status.playerState === 'IDLE' && status.idleReason) {
+                        console.error(`[Chromecast] Player is IDLE with reason: ${status.idleReason}`);
+                        if (status.idleReason === 'ERROR') {
+                            console.error(`[Chromecast] Playback error occurred`);
+                        }
+                    }
 
                     player.on('status', (status) => {
                         console.log(`[Chromecast] Player status update:`, status);
+                        
+                        // Log errors
+                        if (status.playerState === 'IDLE' && status.idleReason === 'ERROR') {
+                            console.error(`[Chromecast] Playback error detected in status update`);
+                        }
                     });
 
                     resolve({

@@ -1,3 +1,18 @@
+// Global error handlers to catch uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
+    // Show error dialog
+    if (app && app.isReady()) {
+        const { dialog } = require('electron');
+        dialog.showErrorBox('Application Error', `An error occurred:\n\n${error.message}\n\nStack:\n${error.stack}`);
+    }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 import { app, BrowserWindow, ipcMain, shell, clipboard, dialog, Menu, session } from 'electron';
 import { spawn, spawnSync, fork } from 'child_process';
 import path from 'path';
@@ -3445,7 +3460,7 @@ ipcMain.handle('spawn-mpvjs-player', async (event, { url, tmdbId, imdbId, season
 
     // IPC handler to cast to Chromecast using bundled castv2-client
     ipcMain.handle('cast-to-chromecast', async (event, data) => {
-        const { streamUrl, metadata, deviceHost } = data || {};
+        const { streamUrl, metadata, deviceHost, subtitles, subtitleOptions } = data || {};
         
         if (!streamUrl) {
             return { success: false, message: 'No stream URL provided' };
@@ -3465,29 +3480,28 @@ ipcMain.handle('spawn-mpvjs-player', async (event, { url, tmdbId, imdbId, season
                 console.log('[Chromecast] Detected HLS stream, set contentType to application/x-mpegURL');
             }
             
-            // Wrap URL through local proxy if it's not already proxied
-            let urlToProxy = streamUrl;
-            const alreadyProxied = /\/stream\/debrid\?url=/.test(urlToProxy);
-            if (!alreadyProxied) {
-                // Wrap through proxy so PC handles fetching/caching
-                urlToProxy = `http://localhost:6987/stream/debrid?url=${encodeURIComponent(streamUrl)}`;
-            }
+            // ALWAYS proxy the stream through the stream-proxy endpoint
+            // This ensures headers are forwarded and the stream works
+            const STREAM_PROXY_PORT = 8765;
+            const proxiedUrl = `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(streamUrl)}`;
+            
+            console.log('[Chromecast] Proxied URL:', proxiedUrl);
             
             // Replace localhost with network IP on same subnet as device
-            const networkStreamUrl = replaceLocalhostWithNetworkIP(urlToProxy, deviceHost);
+            const networkStreamUrl = replaceLocalhostWithNetworkIP(proxiedUrl, deviceHost);
             
-            console.log('[Chromecast] Final URL for Chromecast:', networkStreamUrl);
+            console.log('[Chromecast] Final network URL for Chromecast:', networkStreamUrl);
             
             let result;
             if (deviceHost) {
-                // Cast to specific device
+                // Cast to specific device with subtitles
                 console.log(`[Chromecast] Casting to specific device: ${deviceHost}`);
                 const { castMedia } = await import('./chromecast.mjs');
-                result = await castMedia(deviceHost, networkStreamUrl, metadata);
+                result = await castMedia(deviceHost, networkStreamUrl, metadata, subtitleOptions || {});
             } else {
                 // Cast to first available device
                 const { castToFirstDevice } = await import('./chromecast.mjs');
-                result = await castToFirstDevice(networkStreamUrl, metadata);
+                result = await castToFirstDevice(networkStreamUrl, metadata, subtitleOptions || {});
             }
             
             return { 
@@ -4378,10 +4392,11 @@ function startStreamProxyServer() {
 
             // Determine if this is a manifest or binary data
             // Only treat as manifest if it's actually a playlist file, not a segment
-            const isManifest = (targetUrl.includes('.m3u8') || targetUrl.includes('.mpd')) && 
+            const isManifest = ((targetUrl.includes('.m3u8') || targetUrl.includes('.mpd') || targetUrl.includes('vixsrc.to/playlist/')) && 
                                !targetUrl.match(/\.(ts|jpg|jpeg|png|mp4|m4s)$/i) &&
                                !targetUrl.match(/playlist_\d+/i) &&
-                               !targetUrl.match(/segment|chunk|frag/i);
+                               !targetUrl.match(/segment|chunk|frag/i)) ||
+                               (targetUrl.includes('vixsrc.to/playlist/') && !targetUrl.includes('type=subtitle'));
             const isEncryptionKey = targetUrl.includes('enc.key') || targetUrl.includes('.key');
             
             const response = await axios({
@@ -4412,7 +4427,11 @@ function startStreamProxyServer() {
                 console.log('[StreamProxy] Original manifest length:', data.length);
                 console.log('[StreamProxy] Original manifest first 800 chars:\n', data.substring(0, 800));
                 
-                const rewritten = rewriteStreamManifest(data, targetUrl);
+                // Get the host from the request to support both localhost and network IP
+                const requestHost = req.get('host') || `localhost:${STREAM_PROXY_PORT}`;
+                console.log('[StreamProxy] Request host:', requestHost);
+                
+                const rewritten = rewriteStreamManifest(data, targetUrl, requestHost);
                 
                 console.log('[StreamProxy] Rewritten manifest length:', rewritten.length);
                 console.log('[StreamProxy] Rewritten manifest first 800 chars:\n', rewritten.substring(0, 800));
@@ -4440,11 +4459,15 @@ function startStreamProxyServer() {
     });
 }
 
-function rewriteStreamManifest(content, baseUrl) {
+function rewriteStreamManifest(content, baseUrl, proxyHost = null) {
     const base = new URL(baseUrl);
     const lines = content.split('\n');
     
+    // Use provided proxy host or default to localhost
+    const host = proxyHost || `localhost:${STREAM_PROXY_PORT}`;
+    
     console.log('[StreamProxy] Rewriting manifest with base URL:', baseUrl);
+    console.log('[StreamProxy] Using proxy host:', host);
     console.log('[StreamProxy] Total lines:', lines.length);
     
     const rewritten = lines.map((line, index) => {
@@ -4469,7 +4492,7 @@ function rewriteStreamManifest(content, baseUrl) {
                     fullUrl = `${base.origin}${basePath}${uri}`;
                 }
                 
-                const proxied = `URI="http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
+                const proxied = `URI="http://${host}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
                 console.log('[StreamProxy] Rewrote encryption key URI:', uri, '->', proxied);
                 return proxied;
             });
@@ -4490,7 +4513,7 @@ function rewriteStreamManifest(content, baseUrl) {
                     fullUrl = `${base.origin}${basePath}${uri}`;
                 }
                 
-                const proxied = `URI="http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
+                const proxied = `URI="http://${host}/stream-proxy?url=${encodeURIComponent(fullUrl)}"`;
                 console.log('[StreamProxy] Rewrote map URI:', uri, '->', proxied);
                 return proxied;
             });
@@ -4516,7 +4539,7 @@ function rewriteStreamManifest(content, baseUrl) {
             fullUrl = `${base.origin}${basePath}${url}`;
         }
         
-        const proxied = `http://localhost:${STREAM_PROXY_PORT}/stream-proxy?url=${encodeURIComponent(fullUrl)}`;
+        const proxied = `http://${host}/stream-proxy?url=${encodeURIComponent(fullUrl)}`;
         
         if (index < 20) { // Log first 20 URL rewrites for debugging
             console.log('[StreamProxy] Rewrote URL:', url, '->', proxied.substring(0, 100) + '...');
@@ -4545,6 +4568,7 @@ function setupStreamNetworkInterception(window) {
         if (url.includes('vixsrc.to/playlist/') && url.includes('h=1') && !streamDetected) {
             console.log('[StreamExtractor] VixSrc master playlist detected:', url);
             streamDetected = true;
+            stopSpamClicking(); // Stop spam clicking when stream is detected
             
             const pageUrl = window.webContents.getURL();
             
@@ -4582,6 +4606,7 @@ function setupStreamNetworkInterception(window) {
                 
                 console.log('[StreamExtractor] Reconstructed m3u8 from .ts segment:', reconstructedM3u8);
                 streamDetected = true;
+                stopSpamClicking(); // Stop spam clicking when stream is detected
                 
                 const pageUrl = window.webContents.getURL();
                 
@@ -4622,6 +4647,7 @@ function setupStreamNetworkInterception(window) {
                 
                 console.log('[StreamExtractor] Reconstructed mpd from .m4s segment:', reconstructedMpd);
                 streamDetected = true;
+                stopSpamClicking(); // Stop spam clicking when stream is detected
                 
                 const pageUrl = window.webContents.getURL();
                 
@@ -4656,6 +4682,7 @@ function setupStreamNetworkInterception(window) {
             if (!url.includes('m3u8_proxy') && !url.includes('/video/') && !url.includes('/audio/')) {
                 console.log('[StreamExtractor] Anitaro master stream detected:', url);
                 streamDetected = true;
+                stopSpamClicking(); // Stop spam clicking when stream is detected
                 
                 const pageUrl = window.webContents.getURL();
                 
@@ -4699,6 +4726,7 @@ function setupStreamNetworkInterception(window) {
             if (isMasterManifest && !isSegment) {
                 console.log('[StreamExtractor] Master stream detected:', url);
                 streamDetected = true;
+                stopSpamClicking(); // Stop spam clicking when stream is detected
                 
                 const pageUrl = window.webContents.getURL();
                 
@@ -4746,6 +4774,7 @@ function setupStreamNetworkInterception(window) {
             if (isMasterManifest && !isSegment && !streamCapturedHeaders[url]) {
                 console.log('[StreamExtractor] Master stream detected (completed):', url);
                 streamDetected = true;
+                stopSpamClicking(); // Stop spam clicking when stream is detected
                 
                 const pageUrl = window.webContents.getURL();
                 
@@ -4773,6 +4802,9 @@ function setupStreamNetworkInterception(window) {
     });
 }
 
+// Store click interval for cleanup
+let streamClickInterval = null;
+
 function simulateStreamClick(window, targetUrl) {
     if (!window || window.isDestroyed()) {
         console.log('[StreamExtractor] Window is destroyed, cannot simulate click');
@@ -4783,8 +4815,10 @@ function simulateStreamClick(window, targetUrl) {
     
     const clickScript = `
         try {
-            console.log('[StreamExtractor] Simulating single click...');
             const isVideasy = ${isVideasy};
+            
+            // Block new window/tab creation
+            window.open = function() { return null; };
             
             const videos = document.querySelectorAll('video');
             for (let i = 0; i < videos.length; i++) {
@@ -4793,16 +4827,18 @@ function simulateStreamClick(window, targetUrl) {
             }
             
             if (isVideasy) {
-                console.log('[StreamExtractor] Detected videasy.net - clicking specific play button');
-                
                 const buttons = document.querySelectorAll('button');
                 let clicked = false;
                 
                 for (let i = 0; i < buttons.length; i++) {
                     const svg = buttons[i].querySelector('svg.play-icon-main');
                     if (svg) {
-                        buttons[i].click();
-                        console.log('[StreamExtractor] Clicked button with play-icon-main SVG');
+                        const event = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        buttons[i].dispatchEvent(event);
                         clicked = true;
                         break;
                     }
@@ -4811,8 +4847,12 @@ function simulateStreamClick(window, targetUrl) {
                 if (!clicked) {
                     const playIcon = document.querySelector('svg.play-icon-main');
                     if (playIcon) {
-                        playIcon.click();
-                        console.log('[StreamExtractor] Clicked play-icon-main SVG directly');
+                        const event = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        playIcon.dispatchEvent(event);
                         clicked = true;
                     }
                 }
@@ -4820,8 +4860,12 @@ function simulateStreamClick(window, targetUrl) {
                 if (!clicked) {
                     const playIcon = document.querySelector('svg.play-icon-main');
                     if (playIcon && playIcon.parentElement) {
-                        playIcon.parentElement.click();
-                        console.log('[StreamExtractor] Clicked parent of play-icon-main');
+                        const event = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        playIcon.parentElement.dispatchEvent(event);
                         clicked = true;
                     }
                 }
@@ -4831,25 +4875,30 @@ function simulateStreamClick(window, targetUrl) {
                     if (titleYear) {
                         const button = titleYear.querySelector('button');
                         if (button) {
-                            button.click();
-                            console.log('[StreamExtractor] Clicked button in title-year container');
+                            const event = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            button.dispatchEvent(event);
                             clicked = true;
                         }
                     }
                 }
                 
-                if (!clicked) {
-                    console.log('[StreamExtractor] Could not find videasy play button');
-                }
-                
             } else {
+                // Spam click center of screen
                 const width = window.innerWidth;
                 const height = window.innerHeight;
                 
                 const centerElement = document.elementFromPoint(width / 2, height / 2);
                 if (centerElement) {
-                    centerElement.click();
-                    console.log('Clicked center element:', centerElement.tagName);
+                    const event = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    });
+                    centerElement.dispatchEvent(event);
                 }
                 
                 const selectors = [
@@ -4869,7 +4918,12 @@ function simulateStreamClick(window, targetUrl) {
                     for (let i = 0; i < elements.length; i++) {
                         const el = elements[i];
                         try {
-                            el.click();
+                            const event = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            el.dispatchEvent(event);
                             
                             if (el.tagName === 'VIDEO') {
                                 el.muted = true;
@@ -4888,19 +4942,20 @@ function simulateStreamClick(window, targetUrl) {
                                         
                                         const iframeButtons = iframeDoc.querySelectorAll('button, .play, .vjs-big-play-button');
                                         for (let j = 0; j < iframeButtons.length; j++) {
-                                            iframeButtons[j].click();
+                                            const iframeEvent = new MouseEvent('click', {
+                                                bubbles: true,
+                                                cancelable: true,
+                                                view: iframeDoc.defaultView
+                                            });
+                                            iframeButtons[j].dispatchEvent(iframeEvent);
                                         }
                                     }
-                                } catch(e) {
-                                    console.log('Cannot access iframe');
-                                }
+                                } catch(e) {}
                             }
                         } catch(e) {}
                     }
                 }
             }
-            
-            console.log('[StreamExtractor] Single click simulation complete');
         } catch(err) {
             console.error('Click script error:', err);
         }
@@ -4911,8 +4966,43 @@ function simulateStreamClick(window, targetUrl) {
     });
 }
 
+function startSpamClicking(window, targetUrl) {
+    // Clear any existing interval
+    if (streamClickInterval) {
+        clearInterval(streamClickInterval);
+        streamClickInterval = null;
+    }
+    
+    console.log('[StreamExtractor] Starting spam clicking every 500ms...');
+    
+    // Click immediately
+    simulateStreamClick(window, targetUrl);
+    
+    // Then spam click every 500ms
+    streamClickInterval = setInterval(() => {
+        if (!window || window.isDestroyed()) {
+            console.log('[StreamExtractor] Window destroyed, stopping spam clicks');
+            if (streamClickInterval) {
+                clearInterval(streamClickInterval);
+                streamClickInterval = null;
+            }
+            return;
+        }
+        simulateStreamClick(window, targetUrl);
+    }, 500);
+}
+
+function stopSpamClicking() {
+    if (streamClickInterval) {
+        console.log('[StreamExtractor] Stopping spam clicks');
+        clearInterval(streamClickInterval);
+        streamClickInterval = null;
+    }
+}
+
 function createStreamExtractionWindow(targetUrl) {
     if (streamExtractionWindow) {
+        stopSpamClicking(); // Stop any existing spam clicking
         streamExtractionWindow.close();
     }
 
@@ -4933,24 +5023,37 @@ function createStreamExtractionWindow(targetUrl) {
     );
 
     streamExtractionWindow.webContents.setAudioMuted(true);
+    
+    // Block all new window creation (prevent popup spam)
+    streamExtractionWindow.webContents.setWindowOpenHandler(() => {
+        console.log('[StreamExtractor] Blocked new window creation');
+        return { action: 'deny' };
+    });
 
     setupStreamNetworkInterception(streamExtractionWindow);
     
     streamExtractionWindow.loadURL(targetUrl);
 
     streamExtractionWindow.webContents.on('did-finish-load', () => {
-        console.log('[StreamExtractor] Page loaded, simulating single click...');
+        console.log('[StreamExtractor] Page loaded, starting spam clicks...');
         setTimeout(() => {
             if (streamExtractionWindow && !streamExtractionWindow.isDestroyed()) {
-                simulateStreamClick(streamExtractionWindow, targetUrl);
+                startSpamClicking(streamExtractionWindow, targetUrl);
             } else {
-                console.log('[StreamExtractor] Window was closed before click could be simulated');
+                console.log('[StreamExtractor] Window was closed before clicks could start');
             }
         }, 2000);
     });
 
     streamExtractionWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
         console.error('[StreamExtractor] Failed to load:', errorDescription);
+    });
+    
+    // Stop spam clicking when window is closed
+    streamExtractionWindow.on('closed', () => {
+        console.log('[StreamExtractor] Window closed, stopping spam clicks');
+        stopSpamClicking();
+        streamExtractionWindow = null;
     });
 }
 
@@ -4969,6 +5072,7 @@ ipcMain.handle('extract-stream', (event, url) => {
 });
 
 ipcMain.handle('close-stream-extraction', () => {
+    stopSpamClicking(); // Stop spam clicking when manually closing
     if (streamExtractionWindow) {
         streamExtractionWindow.close();
         streamExtractionWindow = null;
