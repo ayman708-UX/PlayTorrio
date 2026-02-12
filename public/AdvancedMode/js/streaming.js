@@ -1762,53 +1762,46 @@ function initPlayerControls() {
             console.log('[Cast] Starting cast process...');
             console.log('[Cast] Current stream URL:', currentStreamUrl);
             
-            // Show cast modal with subtitle selection
+            // Show cast modal with subtitle info
             const modal = document.getElementById('castDeviceModal');
-            const subtitleSelection = document.getElementById('castSubtitleSelection');
+            const subtitleInfo = document.getElementById('castSubtitleInfo');
             const deviceSelection = document.getElementById('castDeviceSelection');
-            const subtitleList = document.getElementById('castSubtitleList');
+            const currentSubtitleDisplay = document.getElementById('castCurrentSubtitle');
             const continueBtn = document.getElementById('castContinueBtn');
+            const skipBtn = document.getElementById('castSkipBtn');
             const cancelBtn1 = document.getElementById('castCancelBtn1');
             const cancelBtn2 = document.getElementById('castCancelBtn2');
             
-            if (!modal || !subtitleSelection || !deviceSelection) return;
+            if (!modal || !subtitleInfo || !deviceSelection) return;
             
-            // Show modal with subtitle selection
-            modal.style.display = 'flex';
-            subtitleSelection.style.display = 'block';
-            deviceSelection.style.display = 'none';
+            // Get currently active subtitle
+            let currentSubtitleIndex = -1;
+            let currentSubtitleName = 'None';
             
-            // Populate subtitle list
-            subtitleList.innerHTML = '<div class="cast-subtitle-item selected" data-subtitle-index="-1"><span>No Subtitles</span></div>';
-            
-            if (currentSubtitles && currentSubtitles.length > 0) {
-                currentSubtitles.forEach((sub, index) => {
-                    const subItem = document.createElement('div');
-                    subItem.className = 'cast-subtitle-item';
-                    subItem.dataset.subtitleIndex = index;
-                    subItem.innerHTML = `<span>${sub.display || sub.language || `Subtitle ${index + 1}`}</span>`;
-                    
-                    subItem.onclick = () => {
-                        document.querySelectorAll('.cast-subtitle-item').forEach(item => item.classList.remove('selected'));
-                        subItem.classList.add('selected');
-                    };
-                    
-                    subtitleList.appendChild(subItem);
-                });
+            // Check if there's an active subtitle
+            if (activeSub && activeSub.info) {
+                // Find the index of the active subtitle in currentSubtitles array
+                currentSubtitleIndex = currentSubtitles.findIndex(sub => 
+                    sub.url === activeSub.info.url || 
+                    sub.display === activeSub.info.display
+                );
+                currentSubtitleName = activeSub.info.display || activeSub.info.language || 'Active Subtitle';
             }
             
-            // Handle subtitle item clicks
-            document.querySelectorAll('.cast-subtitle-item').forEach(item => {
-                item.onclick = () => {
-                    document.querySelectorAll('.cast-subtitle-item').forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
-                };
-            });
+            console.log('[Cast] Current subtitle index:', currentSubtitleIndex);
+            console.log('[Cast] Current subtitle name:', currentSubtitleName);
+            console.log('[Cast] Active sub:', activeSub);
+            
+            // Show modal with subtitle info
+            modal.style.display = 'flex';
+            subtitleInfo.style.display = 'block';
+            deviceSelection.style.display = 'none';
+            currentSubtitleDisplay.textContent = currentSubtitleName;
             
             // Close modal function
             const closeModal = () => {
                 modal.style.display = 'none';
-                subtitleSelection.style.display = 'none';
+                subtitleInfo.style.display = 'none';
                 deviceSelection.style.display = 'none';
             };
             
@@ -1819,16 +1812,22 @@ function initPlayerControls() {
                 if (e.target === modal) closeModal();
             };
             
-            // Continue button - show device selection
+            // Continue button - use current subtitle
             continueBtn.onclick = async () => {
-                // Get selected subtitle
-                const selectedItem = document.querySelector('.cast-subtitle-item.selected');
-                const selectedIndex = selectedItem ? parseInt(selectedItem.dataset.subtitleIndex) : -1;
-                
+                await proceedToDeviceSelection(currentSubtitleIndex);
+            };
+            
+            // Skip button - no subtitles
+            skipBtn.onclick = async () => {
+                await proceedToDeviceSelection(-1);
+            };
+            
+            // Function to proceed to device selection
+            async function proceedToDeviceSelection(selectedIndex) {
                 console.log('[Cast] Selected subtitle index:', selectedIndex);
                 
                 // Show device selection
-                subtitleSelection.style.display = 'none';
+                subtitleInfo.style.display = 'none';
                 deviceSelection.style.display = 'block';
                 
                 const deviceList = document.getElementById('castDeviceList');
@@ -1867,7 +1866,7 @@ function initPlayerControls() {
                     console.error('[Cast] Discovery error:', error);
                     deviceList.innerHTML = `<div class="cast-loading">Error discovering devices:<br>${error.message}</div>`;
                 }
-            };
+            }
         });
     }
     

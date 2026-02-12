@@ -210,15 +210,17 @@
         <div class="cast-device-modal-content">
             <h2>Cast to Chromecast</h2>
             
-            <!-- Subtitle Selection (shown first) -->
-            <div id="castSubtitleSelection" style="display: none;">
-                <h3>Select Subtitle (Optional)</h3>
-                <div id="castSubtitleList" class="cast-subtitle-list">
-                    <div class="cast-subtitle-item" data-subtitle-index="-1">
-                        <span>No Subtitles</span>
-                    </div>
+            <!-- Subtitle Info Message -->
+            <div id="castSubtitleInfo" style="display: none;">
+                <p style="color: #ccc; margin-bottom: 15px; text-align: center;">
+                    Select a subtitle from the player before casting, or skip to cast without subtitles.
+                </p>
+                <div style="background: rgba(157, 78, 221, 0.2); border: 2px solid rgba(157, 78, 221, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                    <div style="color: #9d4edd; font-weight: 600; margin-bottom: 5px;">Current Subtitle:</div>
+                    <div id="castCurrentSubtitle" style="color: white; font-size: 18px;">None</div>
                 </div>
-                <button class="cast-continue-btn" id="castContinueBtn">Continue</button>
+                <button class="cast-continue-btn" id="castContinueBtn">Continue with Current Subtitle</button>
+                <button class="cast-skip-btn" id="castSkipBtn">Skip (No Subtitles)</button>
                 <button class="cast-cancel-btn" id="castCancelBtn1">Cancel</button>
             </div>
             

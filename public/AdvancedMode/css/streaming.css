@@ -1126,3 +1126,22 @@ input:checked + .toggle-slider:before {
     background: #7b2cbf;
     border-color: #7b2cbf;
 }
+
+.cast-skip-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #666;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 10px;
+}
+
+.cast-skip-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #999;
+}
