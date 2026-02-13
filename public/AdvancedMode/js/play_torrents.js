@@ -354,36 +354,63 @@ export const searchPlayTorrio = async (mediaData) => {
             throw new Error('No title available for search');
         }
         
-        let query;
-        if (type === 'tv') {
+        let queries = [];
+        if (type === 'tv' && episode) {
             const s = String(season).padStart(2, '0');
-            const e = episode ? String(episode).padStart(2, '0') : '';
-            query = episode ? `${title} S${s}E${e}` : `${title} S${s}`;
+            const e = String(episode).padStart(2, '0');
+            // Search for both season pack AND specific episode (like Jackett)
+            queries.push(`${title} S${s}`);           // Season pack
+            queries.push(`${title} S${s}E${e}`);      // Specific episode
+        } else if (type === 'tv') {
+            const s = String(season).padStart(2, '0');
+            queries.push(`${title} S${s}`);
         } else {
-            query = `${title} ${year}`;
+            queries.push(`${title} ${year}`);
         }
         
-        const torrentlessUrl = `http://localhost:6987/torrentless/api/search?q=${encodeURIComponent(query)}&page=1`;
-        console.log('[PlayTorrio] Query:', query);
-        console.log('[PlayTorrio] Fetching from:', torrentlessUrl);
+        console.log('[PlayTorrio] Searching with queries:', queries);
         
-        const response = await fetch(torrentlessUrl);
+        // Fetch results for all queries in parallel
+        const results = await Promise.all(
+            queries.map(async (query) => {
+                const torrentlessUrl = `http://localhost:6987/torrentless/api/search?q=${encodeURIComponent(query)}&page=1`;
+                console.log('[PlayTorrio] Fetching:', torrentlessUrl);
+                
+                const response = await fetch(torrentlessUrl);
+                
+                if (!response.ok) {
+                    console.error(`[PlayTorrio] API Error for query "${query}":`, response.status);
+                    return [];
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error(`[PlayTorrio] Error for query "${query}":`, data.error);
+                    return [];
+                }
+                
+                return data.items || [];
+            })
+        );
         
-        if (!response.ok) {
-            throw new Error(`PlayTorrio API Error: ${response.status}`);
-        }
+        // Flatten and deduplicate results
+        const allItems = results.flat();
+        const seen = new Set();
+        const uniqueItems = [];
         
-        const data = await response.json();
+        allItems.forEach(item => {
+            const id = item.magnet || item.title;
+            if (id && !seen.has(id)) {
+                seen.add(id);
+                uniqueItems.push(item);
+            }
+        });
         
-        if (data.error) {
-            throw new Error(data.error);
-        }
+        console.log('[PlayTorrio] Found', uniqueItems.length, 'unique results from', queries.length, 'queries');
         
-        const items = data.items || [];
-        console.log('[PlayTorrio] Found', items.length, 'results');
-        
-        // Convert torrentless items to standard source format
-        return items.map(item => {
+        // Convert torrentless items to standard format for filtering
+        const convertedItems = uniqueItems.map(item => {
             const itemTitle = item.name || item.title || 'Unknown';
             const quality = detectQuality(itemTitle);
             const codec = detectCodec(itemTitle);
@@ -392,23 +419,30 @@ export const searchPlayTorrio = async (mediaData) => {
             
             return {
                 Title: itemTitle,
-                title: itemTitle,
-                quality: quality,
-                codec: codec,
-                Size: item.size || 'Unknown',
-                size: item.size || 'Unknown',
-                sizeBytes: parseSize(item.size || '0'),
+                Size: parseSize(item.size || '0'),
                 Seeders: seeders,
-                seeders: seeders,
+                Peers: 0,
                 Tracker: 'PlayTorrio',
-                indexer: 'PlayTorrio',
                 Link: null,
-                link: null,
                 MagnetUri: item.magnet,
-                magnet: item.magnet,
-                hdr: detectHDR(itemTitle)
+                Guid: item.magnet
             };
         });
+        
+        // Apply same filters as Jackett/Prowlarr
+        const metadata = {
+            title: title,
+            type: type,
+            season: season,
+            episode: episode,
+            year: year
+        };
+        
+        console.log('[PlayTorrio] Applying filters with metadata:', metadata);
+        const filtered = filterTorrents(convertedItems, metadata);
+        console.log('[PlayTorrio] After filtering:', filtered.length, 'results');
+        
+        return filtered;
     } catch (error) {
         console.error('[PlayTorrio] Error:', error);
         throw new Error('PLAYTORRIO_CONNECTION_ERROR');

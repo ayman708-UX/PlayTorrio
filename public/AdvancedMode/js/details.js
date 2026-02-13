@@ -295,9 +295,14 @@ function displaySimilar(similar) {
 async function loadSeasons(numberOfSeasons) {
     const seasonsSelector = document.getElementById('seasonsSelector');
     const seasonsSection = document.getElementById('seasonsSection');
+    const prevBtn = document.getElementById('seasonNavPrev');
+    const nextBtn = document.getElementById('seasonNavNext');
     
     seasonsSelector.innerHTML = '';
     
+    console.log('[Seasons] Loading', numberOfSeasons, 'seasons');
+    
+    // Create buttons for all seasons (1 to numberOfSeasons)
     for (let i = 1; i <= numberOfSeasons; i++) {
         const btn = document.createElement('button');
         btn.className = `season-btn ${i === 1 ? 'active' : ''}`;
@@ -306,8 +311,55 @@ async function loadSeasons(numberOfSeasons) {
         seasonsSelector.appendChild(btn);
     }
     
+    // Check if Season 0 (Specials) exists by trying to fetch it
+    try {
+        const season0Url = `${BASE_URL}/tv/${currentMediaId}/season/0?api_key=${API_KEY}`;
+        const response = await fetch(season0Url);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.episodes && data.episodes.length > 0) {
+                console.log('[Seasons] Season 0 (Specials) found with', data.episodes.length, 'episodes');
+                // Add Season 0 button at the beginning
+                const btn = document.createElement('button');
+                btn.className = 'season-btn';
+                btn.textContent = 'Specials';
+                btn.addEventListener('click', (e) => selectSeason(0, e));
+                seasonsSelector.insertBefore(btn, seasonsSelector.firstChild);
+            }
+        }
+    } catch (error) {
+        console.log('[Seasons] No Season 0 (Specials) found');
+    }
+    
+    // Setup scroll navigation arrows
+    prevBtn.style.display = 'flex';
+    nextBtn.style.display = 'flex';
+    
+    prevBtn.onclick = () => {
+        seasonsSelector.scrollBy({ left: -200, behavior: 'smooth' });
+    };
+    
+    nextBtn.onclick = () => {
+        seasonsSelector.scrollBy({ left: 200, behavior: 'smooth' });
+    };
+    
+    // Update arrow visibility on scroll
+    seasonsSelector.addEventListener('scroll', () => updateScrollArrows(seasonsSelector, prevBtn, nextBtn));
+    
+    // Initial arrow state check
+    setTimeout(() => updateScrollArrows(seasonsSelector, prevBtn, nextBtn), 100);
+    
     seasonsSection.style.display = 'block';
     await loadEpisodes(1);
+}
+
+// Update scroll arrow states based on scroll position
+function updateScrollArrows(container, prevBtn, nextBtn) {
+    const isAtStart = container.scrollLeft <= 0;
+    const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+    
+    prevBtn.disabled = isAtStart;
+    nextBtn.disabled = isAtEnd;
 }
 
 // Select season

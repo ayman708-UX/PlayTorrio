@@ -121,38 +121,7 @@
             box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
         }
         
-        /* Episode cards */
-        .episode-btn {
-            background: rgba(139, 92, 246, 0.1) !important;
-            border: 2px solid rgba(139, 92, 246, 0.3) !important;
-            border-radius: 16px !important;
-            transition: all 0.3s !important;
-        }
-        
-        .episode-btn:hover {
-            background: rgba(139, 92, 246, 0.2) !important;
-            border-color: rgba(139, 92, 246, 0.6) !important;
-            transform: translateY(-4px) !important;
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4) !important;
-        }
-        
-        .episode-btn.ring-2 {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
-            border-color: #8b5cf6 !important;
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6) !important;
-        }
-        
-        /* Season buttons */
-        .season-btn {
-            background: rgba(139, 92, 246, 0.1) !important;
-            border: 2px solid rgba(139, 92, 246, 0.3) !important;
-            border-radius: 12px !important;
-        }
-        
-        .season-btn.bg-purple-600 {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
-        }
+        /* Removed: Episode and season button styles (no longer needed) */
         
         /* Scrollbar */
         ::-webkit-scrollbar {
@@ -238,11 +207,11 @@
     <!-- Content -->
     <div class="relative z-10">
         <!-- Back Button -->
-        <a href="index.html" class="fixed top-12 left-6 z-50 w-12 h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-purple-600 transition-colors group">
+        <button id="back-button" class="fixed top-12 left-6 z-50 w-12 h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-purple-600 transition-colors group">
              <svg class="w-6 h-6 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
-        </a>
+        </button>
 
         <!-- Settings Modal -->
         <div id="settings-modal" class="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 p-4">
@@ -436,27 +405,9 @@
              <!-- RIGHT PANEL - Sources/Episodes -->
              <div class="lg:w-1/2 xl:w-3/5 p-4 sm:p-6 lg:p-12 lg:pt-12 bg-gradient-to-l from-black/50 to-transparent transition-all duration-700 delay-100 transform translate-x-4 opacity-0 flex flex-col min-h-[50vh] lg:min-h-screen overflow-y-auto overflow-x-hidden" id="right-panel-anim-target">
                 
-                <!-- Season Selector (TV Only) -->
-                <div id="season-section" class="mb-6 flex-shrink-0 hidden">
-                    <h3 class="text-white font-semibold mb-3 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        Seasons
-                    </h3>
-                    <div id="season-list" class="flex flex-wrap gap-2"></div>
-                </div>
-
-                <!-- Episode Grid (TV Only) -->
-                <div id="episode-section" class="mb-6 flex-shrink-0 hidden">
-                    <h3 class="text-white font-semibold mb-3 flex items-center gap-2">
-                         <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <span id="episodes-title">Episodes</span>
-                    </h3>
-                    <div id="episode-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[180px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar"></div>
-                </div>
+                <!-- Season Selector (TV Only) - REMOVED: Use details page for season/episode selection -->
+                
+                <!-- Episode Grid (TV Only) - REMOVED: Use details page for season/episode selection -->
 
                 <!-- Sources List -->
                 <div id="sources-section" class="flex flex-col flex-1 min-h-0">
@@ -495,14 +446,7 @@
                             <!-- Sources injected here -->
                         </div>
 
-                        <div id="select-episode-msg" class="flex flex-col items-center justify-center py-16 text-center hidden">
-                            <div class="w-20 h-20 bg-purple-600/20 rounded-full flex items-center justify-center mb-4">
-                                <svg class="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                            <p class="text-gray-400 text-lg">Select an episode to view sources</p>
-                        </div>
+                        <!-- Removed: Select episode message (no longer needed) -->
                     </div>
                 </div>
 
@@ -525,27 +469,7 @@
         </div>
     </template>
 
-    <template id="season-btn-template">
-        <button class="season-btn px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-gray-800/80 text-gray-300 hover:bg-gray-700 hover:text-white"></button>
-    </template>
-
-    <template id="episode-card-template">
-        <button class="episode-btn group relative aspect-video rounded-lg overflow-hidden transition-all duration-300 hover:ring-2 hover:ring-purple-500/50 text-left w-full">
-            <div class="absolute inset-0 bg-gray-800">
-                <img class="episode-img w-full h-full object-cover hidden">
-                <div class="episode-placeholder w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                    <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                </div>
-            </div>
-            <div class="episode-overlay absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-70 group-hover:opacity-100 transition-opacity"></div>
-            <div class="episode-number absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-black/60 text-white"></div>
-            <div class="absolute bottom-0 left-0 right-0 p-2">
-                <p class="episode-name text-white text-xs font-medium line-clamp-1"></p>
-            </div>
-        </button>
-    </template>
+    <!-- Removed: Season and episode templates (no longer needed) -->
 
     <template id="source-card-template">
         <div class="source-card bg-gray-900/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-gray-800 hover:border-purple-500/50 transition-all duration-300 group opacity-0 translate-x-4">

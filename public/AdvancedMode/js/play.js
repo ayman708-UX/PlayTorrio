@@ -25,6 +25,7 @@ import {
     formatStremioMeta,
     getVideoId
 } from './stremio-addon.js';
+import { filterTorrents } from './torrent_filter.js';
 
 // Helper functions for parsing torrent/stream info
 const detectQuality = (title) => {
@@ -443,17 +444,18 @@ const addonManifestInput = document.getElementById('addon-manifest-input');
 const installAddonBtn = document.getElementById('install-addon-btn');
 const installedAddonsList = document.getElementById('installed-addons-list');
 const addonItemTemplate = document.getElementById('addon-item-template');
-const seasonSection = document.getElementById('season-section');
-const seasonList = document.getElementById('season-list');
-const episodeSection = document.getElementById('episode-section');
-const episodeGrid = document.getElementById('episode-grid');
+// Removed: Season/episode selectors (no longer in UI)
+// const seasonSection = document.getElementById('season-section');
+// const seasonList = document.getElementById('season-list');
+// const episodeSection = document.getElementById('episode-section');
+// const episodeGrid = document.getElementById('episode-grid');
 const episodesTitle = document.getElementById('episodes-title');
 const sourcesSection = document.getElementById('sources-section');
 const sourcesList = document.getElementById('sources-list');
-const selectEpisodeMsg = document.getElementById('select-episode-msg');
+// const selectEpisodeMsg = document.getElementById('select-episode-msg');
 const sourcesTitle = document.getElementById('sources-title');
-const seasonBtnTemplate = document.getElementById('season-btn-template');
-const episodeCardTemplate = document.getElementById('episode-card-template');
+// const seasonBtnTemplate = document.getElementById('season-btn-template');
+// const episodeCardTemplate = document.getElementById('episode-card-template');
 const sourceCardTemplate = document.getElementById('source-card-template');
 
 const renderAddonTabs = async () => {
@@ -1114,12 +1116,12 @@ const renderSources = async () => {
     if (isTV && !currentEpisode) {
         sourcesList.innerHTML = '';
         sourcesList.classList.add('hidden');
-        selectEpisodeMsg.classList.remove('hidden');
+        // Removed: selectEpisodeMsg (no longer in UI)
         return;
     }
     sourcesList.innerHTML = '<div class="col-span-full text-center py-12"><div class="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div><p class="text-gray-500 text-sm mt-4">Searching for sources...</p></div>';
     sourcesList.classList.remove('hidden');
-    selectEpisodeMsg.classList.add('hidden');
+    // Removed: selectEpisodeMsg (no longer in UI)
     if (isTV) {
         sourcesTitle.innerHTML = currentEpisode ? `Available Sources <span class="text-gray-500 text-sm font-normal">— S${String(currentSeason).padStart(2, '0')}E${String(currentEpisode).padStart(2, '0')}</span>` : `Available Sources <span class="text-gray-500 text-sm font-normal">— Season ${currentSeason} Pack</span>`;
     }
@@ -1357,63 +1359,93 @@ const renderSources = async () => {
                     return;
                 }
                 
-                let query;
-                if (isTV) {
+                let queries = [];
+                if (isTV && currentEpisode) {
                     const s = String(currentSeason).padStart(2, '0');
-                    const e = currentEpisode ? String(currentEpisode).padStart(2, '0') : '';
-                    query = currentEpisode ? `${title} S${s}E${e}` : `${title} S${s}`;
+                    const e = String(currentEpisode).padStart(2, '0');
+                    // Search for both season pack AND specific episode (like Jackett)
+                    queries.push(`${title} S${s}`);           // Season pack
+                    queries.push(`${title} S${s}E${e}`);      // Specific episode
+                } else if (isTV) {
+                    const s = String(currentSeason).padStart(2, '0');
+                    queries.push(`${title} S${s}`);
                 } else {
-                    query = `${title} ${year}`;
+                    queries.push(`${title} ${year}`);
                 }
                 
-                const torrentlessUrl = `http://localhost:6987/torrentless/api/search?q=${encodeURIComponent(query)}&page=1`;
-                console.log('[Torrentless] Query:', query);
-                console.log('[Torrentless] Fetching from:', torrentlessUrl);
+                console.log('[Torrentless] Searching with queries:', queries);
                 
-                const response = await fetch(torrentlessUrl);
+                // Fetch results for all queries in parallel
+                const results = await Promise.all(
+                    queries.map(async (query) => {
+                        const torrentlessUrl = `http://localhost:6987/torrentless/api/search?q=${encodeURIComponent(query)}&page=1`;
+                        console.log('[Torrentless] Fetching:', torrentlessUrl);
+                        
+                        const response = await fetch(torrentlessUrl);
+                        
+                        if (!response.ok) {
+                            console.error(`[Torrentless] API Error for query "${query}":`, response.status);
+                            return [];
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.error) {
+                            console.error(`[Torrentless] Error for query "${query}":`, data.error);
+                            return [];
+                        }
+                        
+                        return data.items || [];
+                    })
+                );
                 
-                if (!response.ok) {
-                    console.error('[Torrentless] API returned error:', response.status, response.statusText);
-                    sourcesList.innerHTML = `<div class="text-center py-12 text-red-400">PlayTorrio search failed (${response.status}). Try again later.</div>`;
-                    return;
-                }
+                // Flatten and deduplicate results
+                const allItems = results.flat();
+                const seen = new Set();
+                const uniqueItems = [];
                 
-                const data = await response.json();
+                allItems.forEach(item => {
+                    const id = item.magnet || item.title;
+                    if (id && !seen.has(id)) {
+                        seen.add(id);
+                        uniqueItems.push(item);
+                    }
+                });
                 
-                if (data.error) {
-                    console.error('[Torrentless] API error:', data.error);
-                    sourcesList.innerHTML = `<div class="text-center py-12 text-red-400">PlayTorrio: ${data.error}</div>`;
-                    return;
-                }
+                console.log('[Torrentless] Found', uniqueItems.length, 'unique results from', queries.length, 'queries');
                 
-                const items = data.items || [];
-                console.log('[Torrentless] Found', items.length, 'results');
-                
-                if (items.length === 0) {
+                if (uniqueItems.length === 0) {
                     allSources = [];
                 } else {
-                    // Convert torrentless items to standard source format
-                    // API returns: { name, magnet, size, seeds (string with commas), leech }
-                    allSources = items.map(item => {
+                    // Convert torrentless items to standard format for filtering
+                    const convertedItems = uniqueItems.map(item => {
                         const itemTitle = item.name || item.title || 'Unknown';
-                        const quality = detectQuality(itemTitle);
-                        const codec = detectCodec(itemTitle);
-                        // Parse seeds - API returns formatted string like "1,234"
                         const seeders = parseInt((item.seeds || '0').toString().replace(/,/g, ''), 10) || 0;
                         
                         return {
-                            title: itemTitle,
-                            quality: quality,
-                            codec: codec,
-                            size: item.size || 'Unknown',
-                            sizeBytes: parseSize(item.size || '0'),
-                            seeders: seeders,
-                            indexer: 'PlayTorrio',
-                            link: null,
-                            magnet: item.magnet,
-                            hdr: detectHDR(itemTitle)
+                            Title: itemTitle,
+                            Size: parseSize(item.size || '0'),
+                            Seeders: seeders,
+                            Peers: 0,
+                            Tracker: 'PlayTorrio',
+                            Link: null,
+                            MagnetUri: item.magnet,
+                            Guid: item.magnet
                         };
                     });
+                    
+                    // Apply same filters as Jackett/Prowlarr
+                    const metadata = {
+                        title: title,
+                        type: type,
+                        season: isTV ? currentSeason : null,
+                        episode: isTV && currentEpisode ? currentEpisode : null,
+                        year: year
+                    };
+                    
+                    console.log('[Torrentless] Applying filters with metadata:', metadata);
+                    allSources = filterTorrents(convertedItems, metadata);
+                    console.log('[Torrentless] After filtering:', allSources.length, 'results');
                 }
             } catch (err) {
                 console.error('[Torrentless] Error:', err);
@@ -2461,53 +2493,10 @@ const displaySources = (sources) => {
 });
 };
 
+// Removed: loadEpisodes function (no longer needed - episodes selected from details page)
 const loadEpisodes = async (seasonNum) => {
-    episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">Loading episodes...</div>';
-    try {
-        // Use currentTmdbId if available (for addon items), otherwise use id (for direct TMDB items)
-        const tmdbIdToUse = currentTmdbId || id;
-        const data = await getSeasonEpisodes(tmdbIdToUse, seasonNum);
-        episodeGrid.innerHTML = '';
-        episodesTitle.textContent = `Episodes (${data.episodes.length})`;
-        data.episodes.forEach((episode) => {
-            const clone = episodeCardTemplate.content.cloneNode(true);
-            const btn = clone.querySelector('.episode-btn');
-            if (episode.still_path) {
-                const img = clone.querySelector('.episode-img');
-                img.src = getImageUrl(episode.still_path, 'w300');
-                img.classList.remove('hidden');
-                clone.querySelector('.episode-placeholder').classList.add('hidden');
-            }
-            clone.querySelector('.episode-number').textContent = episode.episode_number;
-            clone.querySelector('.episode-name').textContent = episode.name;
-            btn.onclick = () => {
-                document.querySelectorAll('.episode-btn').forEach(b => {
-                    b.classList.remove('ring-2', 'ring-purple-500');
-                    b.querySelector('.episode-overlay').classList.remove('opacity-100');
-                });
-                btn.classList.add('ring-2', 'ring-purple-500');
-                btn.querySelector('.episode-overlay').classList.add('opacity-100');
-                currentEpisode = episode.episode_number;
-                renderSources();
-                // Auto-update embedded player if it's visible
-                updateEmbeddedPlayerForEpisode();
-            };
-            episodeGrid.appendChild(clone);
-            
-            // Auto-select episode from URL if it matches
-            if (urlEpisode && episode.episode_number === parseInt(urlEpisode)) {
-                setTimeout(() => {
-                    btn.classList.add('ring-2', 'ring-purple-500');
-                    btn.querySelector('.episode-overlay').classList.add('opacity-100');
-                    currentEpisode = episode.episode_number;
-                    renderSources();
-                }, 100);
-            }
-        });
-    } catch (e) {
-        console.error('[Episodes] Failed to load:', e);
-        episodeGrid.innerHTML = '<div class="col-span-full text-red-500">Failed to load episodes.</div>';
-    }
+    // No-op: Episodes are selected from the details page
+    console.log('[Episodes] Skipping episode loading - using URL params:', { season: currentSeason, episode: currentEpisode });
 };
 
 const init = async () => {
@@ -2653,71 +2642,10 @@ const init = async () => {
                 renderDetails(currentDetails);
                 await renderAddonTabs();
                 
-                // Handle series with videos array
-                if (isTV && stremioMeta.videos && stremioMeta.videos.length > 0) {
-                    seasonSection.classList.remove('hidden');
-                    episodeSection.classList.remove('hidden');
-                    
-                    const seasons = {};
-                    stremioMeta.videos.forEach(v => {
-                        if (!seasons[v.season]) seasons[v.season] = [];
-                        seasons[v.season].push({
-                            episode_number: v.episode,
-                            name: v.title || `Episode ${v.episode}`,
-                            still_path: v.thumbnail,
-                            overview: v.overview,
-                            id: v.id
-                        });
-                    });
-                    
-                    Object.keys(seasons).sort((a,b) => a - b).forEach(sNum => {
-                        const clone = seasonBtnTemplate.content.cloneNode(true);
-                        const btn = clone.querySelector('.season-btn');
-                        btn.textContent = `Season ${sNum}`;
-                        btn.onclick = () => {
-                            document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('bg-purple-600', 'text-white'));
-                            btn.classList.add('bg-purple-600', 'text-white');
-                            currentSeason = parseInt(sNum);
-                            currentEpisode = null;
-                            sourcesList.classList.add('hidden');
-                            selectEpisodeMsg.classList.remove('hidden');
-                            
-                            episodeGrid.innerHTML = '';
-                            episodesTitle.textContent = `Episodes (${seasons[sNum].length})`;
-                            seasons[sNum].sort((a,b) => a.episode_number - b.episode_number).forEach(ep => {
-                                const epClone = episodeCardTemplate.content.cloneNode(true);
-                                const epBtn = epClone.querySelector('.episode-btn');
-                                if (ep.still_path) {
-                                    const img = epClone.querySelector('.episode-img');
-                                    img.src = ep.still_path;
-                                    img.classList.remove('hidden');
-                                    epClone.querySelector('.episode-placeholder').classList.add('hidden');
-                                }
-                                epClone.querySelector('.episode-number').textContent = ep.episode_number;
-                                epClone.querySelector('.episode-name').textContent = ep.name;
-                                epBtn.onclick = () => {
-                                    document.querySelectorAll('.episode-btn').forEach(b => {
-                                        b.classList.remove('ring-2', 'ring-purple-500');
-                                        b.querySelector('.episode-overlay').classList.remove('opacity-100');
-                                    });
-                                    epBtn.classList.add('ring-2', 'ring-purple-500');
-                                    epBtn.querySelector('.episode-overlay').classList.add('opacity-100');
-                                    currentEpisode = ep.episode_number;
-                                    renderSources();
-                                    updateEmbeddedPlayerForEpisode();
-                                };
-                                episodeGrid.appendChild(epClone);
-                            });
-                        };
-                        if (parseInt(sNum) === 1) {
-                            btn.click();
-                        }
-                        seasonList.appendChild(clone);
-                    });
-                } else if (type === 'movie') {
-                    // For movies, show sources immediately
-                    renderSources();
-                }
+                // Removed: Season/episode selector UI (now handled in details page)
+                // Just render sources directly
+                console.log('[Stremio Addon] Using season/episode from URL:', { currentSeason, currentEpisode });
+                renderSources();
                 
                 // Finish loading
                 loadingOverlay.classList.add('opacity-0');
@@ -3039,30 +2967,11 @@ const init = async () => {
             loadTrailer();
             await renderAddonTabs();
 
+            // Removed: Season/episode selector UI (now handled in details page)
+            // Just render sources directly with season/episode from URL
             if (isTV) {
-                seasonSection.classList.remove('hidden');
-                episodeSection.classList.remove('hidden');
-                const regularSeasons = data.seasons.filter(s => s.season_number > 0);
-                regularSeasons.forEach(season => {
-                    const clone = seasonBtnTemplate.content.cloneNode(true);
-                    const btn = clone.querySelector('.season-btn');
-                    btn.textContent = `Season ${season.season_number}`;
-                    btn.onclick = () => {
-                        document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('bg-purple-600', 'text-white'));
-                        btn.classList.add('bg-purple-600', 'text-white');
-                        currentSeason = season.season_number;
-                        currentEpisode = null;
-                        sourcesList.classList.add('hidden');
-                        selectEpisodeMsg.classList.remove('hidden');
-                        loadEpisodes(currentSeason);
-                    };
-                    if (season.season_number === (regularSeasons[0]?.season_number || 1)) {
-                        btn.classList.add('bg-purple-600', 'text-white');
-                        currentSeason = season.season_number;
-                        loadEpisodes(currentSeason);
-                    }
-                    seasonList.appendChild(clone);
-                });
+                console.log('[Init] TV show - using season/episode from URL:', { currentSeason, currentEpisode });
+                renderSources();
             } else {
                 renderSources();
             }
@@ -3082,5 +2991,19 @@ const init = async () => {
         loadingOverlay.innerHTML = '<p class="text-red-500">Failed to load content. Please try again.</p>';
     }
 };
+
+// Back button handler - go to details page instead of home
+const backButton = document.getElementById('back-button');
+if (backButton) {
+    backButton.addEventListener('click', () => {
+        // If we have type and id, go to details page
+        if (type && id) {
+            window.location.href = `details.html?type=${type}&id=${id}`;
+        } else {
+            // Fallback to home
+            window.location.href = 'index.html';
+        }
+    });
+}
 
 document.addEventListener('DOMContentLoaded', init);

@@ -138,7 +138,19 @@
                     </svg>
                     Seasons & Episodes
                 </h2>
-                <div class="seasons-selector" id="seasonsSelector"></div>
+                <div class="seasons-navigation-wrapper">
+                    <button class="season-nav-arrow season-nav-prev" id="seasonNavPrev" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                    </button>
+                    <div class="seasons-selector" id="seasonsSelector"></div>
+                    <button class="season-nav-arrow season-nav-next" id="seasonNavNext" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                        </svg>
+                    </button>
+                </div>
                 <div class="episodes-grid" id="episodesGrid"></div>
             </div>
 

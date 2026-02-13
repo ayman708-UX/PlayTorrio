@@ -850,14 +850,59 @@
     object-fit: contain;
 }
 /* Season Selector Styles */
+.seasons-navigation-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 35px;
+}
+
+.season-nav-arrow {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.season-nav-arrow svg {
+    width: 24px;
+    height: 24px;
+}
+
+.season-nav-arrow:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.season-nav-arrow:active {
+    transform: scale(0.95);
+}
+
+.season-nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .seasons-selector {
     display: flex;
     gap: 12px;
-    margin-bottom: 35px;
     overflow-x: auto;
     padding: 10px 5px;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    flex: 1;
+    scroll-behavior: smooth;
 }
 
 .seasons-selector::-webkit-scrollbar {

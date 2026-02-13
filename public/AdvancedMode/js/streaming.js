@@ -803,12 +803,53 @@ function loadStreamIntoPlayer(streamUrl, title) {
         console.log('[Player] Using HLS.js for m3u8 stream');
         
         streamHls = new Hls({
-            debug: true,
-            enableWorker: false,
+            debug: false,
+            enableWorker: true,
             lowLatencyMode: false,
-            backBufferLength: 90,
-            maxBufferLength: 30,
-            maxMaxBufferLength: 600
+            // Optimized buffer settings for smooth playback
+            maxBufferLength: 60,           // Buffer 60 seconds ahead (increased from 30)
+            maxMaxBufferLength: 120,       // Max buffer cap at 120 seconds (reduced from 600)
+            maxBufferSize: 60 * 1000 * 1000, // 60 MB max buffer size
+            maxBufferHole: 0.5,            // Tolerate 0.5s gaps without stalling
+            highBufferWatchdogPeriod: 2,   // Check buffer health every 2 seconds
+            nudgeOffset: 0.1,              // Small nudge for smoother playback
+            nudgeMaxRetry: 3,              // Retry nudging 3 times
+            maxFragLookUpTolerance: 0.25,  // Fragment lookup tolerance
+            liveSyncDurationCount: 3,      // For live streams
+            liveMaxLatencyDurationCount: 10,
+            liveDurationInfinity: false,
+            // Loader settings for better network handling
+            manifestLoadingTimeOut: 10000,
+            manifestLoadingMaxRetry: 2,
+            manifestLoadingRetryDelay: 1000,
+            levelLoadingTimeOut: 10000,
+            levelLoadingMaxRetry: 4,
+            levelLoadingRetryDelay: 1000,
+            fragLoadingTimeOut: 20000,
+            fragLoadingMaxRetry: 6,
+            fragLoadingRetryDelay: 1000,
+            // ABR (Adaptive Bitrate) settings
+            startLevel: -1,                // Auto-select quality
+            abrEwmaDefaultEstimate: 500000, // Initial bandwidth estimate (500 kbps)
+            abrEwmaFastLive: 3.0,
+            abrEwmaSlowLive: 9.0,
+            abrEwmaFastVoD: 3.0,
+            abrEwmaSlowVoD: 9.0,
+            abrBandWidthFactor: 0.95,      // Use 95% of estimated bandwidth
+            abrBandWidthUpFactor: 0.7,     // More conservative when upgrading quality
+            abrMaxWithRealBitrate: false,
+            maxStarvationDelay: 4,         // Max starvation before quality drop
+            maxLoadingDelay: 4,
+            minAutoBitrate: 0,
+            // Progressive loading
+            progressive: true,
+            // Backbuffer management
+            backBufferLength: 30,          // Keep only 30 seconds behind (reduced from 90)
+            // Other optimizations
+            stretchShortVideoTrack: false,
+            maxAudioFramesDrift: 1,
+            forceKeyFrameOnDiscontinuity: true,
+            testBandwidth: true
         });
         
         // Filter out subtitle tracks before loading
@@ -1197,12 +1238,13 @@ function loadSubtitlesIntoPlayer(subtitles) {
     
     // Group subtitles by language
     const grouped = {};
-    subtitles.forEach(sub => {
+    subtitles.forEach((sub, originalIndex) => {
         const lang = sub.language || 'unknown';
         if (!grouped[lang]) {
             grouped[lang] = [];
         }
-        grouped[lang].push(sub);
+        // Store original index with the subtitle
+        grouped[lang].push({ ...sub, originalIndex });
     });
     
     // Sort languages: English first, then alphabetically
@@ -1244,7 +1286,7 @@ function loadSubtitlesIntoPlayer(subtitles) {
                 </div>
                 <i class="material-icons sub-check-icon">check_circle</i>
             `;
-            item.onclick = () => selectSubtitle(sub, item);
+            item.onclick = () => selectSubtitle(sub, item, sub.originalIndex);
             subsList.appendChild(item);
         });
     });
@@ -1280,10 +1322,10 @@ function loadSubtitlesIntoPlayer(subtitles) {
 }
 
 // Select subtitle and load it
-async function selectSubtitle(sub, itemElement) {
+async function selectSubtitle(sub, itemElement, subIndex) {
     if (!sub) return;
     
-    console.log('[Subtitles] Selecting:', sub.display, sub.url);
+    console.log('[Subtitles] Selecting:', sub.display, sub.url, 'Index:', subIndex);
     
     // Remove active state from all items
     document.querySelectorAll('.sub-item').forEach(item => {
@@ -1306,7 +1348,7 @@ async function selectSubtitle(sub, itemElement) {
         
         console.log('[Subtitles] Parsed', cues.length, 'cues');
         
-        activeSub = { cues, info: sub };
+        activeSub = { cues, info: sub, index: subIndex };
         
         // Start updating subtitle display
         const video = document.getElementById('stream-video');
@@ -1779,12 +1821,9 @@ function initPlayerControls() {
             let currentSubtitleName = 'None';
             
             // Check if there's an active subtitle
-            if (activeSub && activeSub.info) {
-                // Find the index of the active subtitle in currentSubtitles array
-                currentSubtitleIndex = currentSubtitles.findIndex(sub => 
-                    sub.url === activeSub.info.url || 
-                    sub.display === activeSub.info.display
-                );
+            if (activeSub && activeSub.index !== undefined) {
+                // Use the stored index from when subtitle was selected
+                currentSubtitleIndex = activeSub.index;
                 currentSubtitleName = activeSub.info.display || activeSub.info.language || 'Active Subtitle';
             }
             
