@@ -115,11 +115,13 @@ let currentTrailerKey = null;
 // Play Loading Overlay functions
 const playLoadingOverlay = document.getElementById('play-loading-overlay');
 const playLoadingText = document.getElementById('play-loading-text');
+let playOperationCancelled = false; // Flag to track if user cancelled
 
 function showPlayLoading(text = 'Preparing stream...') {
     if (playLoadingOverlay) {
         playLoadingText.textContent = text;
         playLoadingOverlay.classList.remove('hidden');
+        playOperationCancelled = false; // Reset cancellation flag
     }
 }
 
@@ -127,6 +129,24 @@ function hidePlayLoading() {
     if (playLoadingOverlay) {
         playLoadingOverlay.classList.add('hidden');
     }
+}
+
+// Check if operation was cancelled
+function checkCancelled() {
+    if (playOperationCancelled) {
+        console.log('[PlayLoading] Operation cancelled by user');
+        throw new Error('CANCELLED');
+    }
+}
+
+// Setup cancel button for play loading overlay
+const cancelLoadingBtn = document.getElementById('cancel-loading-btn');
+if (cancelLoadingBtn) {
+    cancelLoadingBtn.addEventListener('click', () => {
+        console.log('[PlayLoading] User cancelled operation');
+        playOperationCancelled = true; // Set cancellation flag
+        hidePlayLoading();
+    });
 }
 
 // Fetch subtitles for PlayTorrioPlayer with 5 second timeout
@@ -2109,6 +2129,8 @@ const displaySources = (sources) => {
             showPlayLoading('Preparing stream...');
 
             try {
+                // Check if cancelled
+                checkCancelled();
                 // Check if this is a Jackett/torrent download URL that needs resolution
                 // Jackett URLs look like: http://127.0.0.1:9117/dl/...?jackett_apikey=...
                 const isJackettUrl = externalUrl.includes('jackett') ||      // jackett_apikey or jackett in URL
@@ -2204,6 +2226,7 @@ const displaySources = (sources) => {
                 showPlayLoading('Resolving torrent...');
                 console.log(`[Torrent] Resolving download URL: ${externalUrl.substring(0, 100)}...`);
                 activeLink = await resolveTorrent(externalUrl, source.title);
+                checkCancelled(); // Check if cancelled after resolution
                 if (!activeLink) {
                     hidePlayLoading();
                     alert('Failed to resolve torrent link. Please try another source.');
@@ -2272,12 +2295,14 @@ const displaySources = (sources) => {
                 console.log(`[Debrid] Preparing magnet: ${source.title}`);
                 showPlayLoading('Preparing debrid...');
                 try {
+                    checkCancelled(); // Check before starting debrid
                     const res = await fetch('/api/debrid/prepare', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ magnet: activeLink })
                     });
                     const data = await res.json();
+                    checkCancelled(); // Check after debrid prepare
                     
                     if (data && data.info) {
                         const info = data.info;
@@ -2317,12 +2342,14 @@ const displaySources = (sources) => {
                             if (fileLink) {
                                 showPlayLoading('Getting stream link...');
                                 console.log('[Debrid] Unrestricting target file link...');
+                                checkCancelled(); // Check before unrestricting
                                 const unres = await fetch('/api/debrid/link', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ link: fileLink })
                                 });
                                 const unresData = await unres.json();
+                                checkCancelled(); // Check after unrestricting
                                 if (unresData.url) {
                                     console.log(`[FINAL STREAM LINK] ${unresData.url}`);
                                     openPlayerInIframe({
@@ -2369,6 +2396,7 @@ const displaySources = (sources) => {
                     }
                 } catch (err) {
                     console.error('[Debrid] Error preparing torrent:', err);
+                    if (err.message === 'CANCELLED') return; // Silent return on cancel
                     hidePlayLoading();
                     alert('Error preparing torrent: ' + err.message);
                 }
@@ -2377,6 +2405,7 @@ const displaySources = (sources) => {
                 showPlayLoading('Fetching torrent metadata...');
                 console.log(`[TorrentEngine] Fetching metadata for: ${source.title}`);
                 try {
+                    checkCancelled(); // Check before fetching metadata
                     // Check which engine is configured
                     let engineConfig = { engine: 'stremio' };
                     try {
@@ -2473,12 +2502,17 @@ const displaySources = (sources) => {
                     }
                 } catch (err) {
                     console.error('[TorrentEngine] Error fetching torrent info:', err);
+                    if (err.message === 'CANCELLED') return; // Silent return on cancel
                     hidePlayLoading();
                     alert('Error fetching torrent: ' + err.message);
                 }
             }
         } catch (err) {
             // Catch-all for any unexpected errors
+            if (err.message === 'CANCELLED') {
+                console.log('[Play] Operation cancelled by user');
+                return; // Silent return on cancel
+            }
             console.error('[Play] Unexpected error:', err);
             hidePlayLoading();
         }

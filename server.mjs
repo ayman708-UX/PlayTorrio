@@ -1268,13 +1268,15 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
                 writeSettings(s);
             }
             
-            // Migration v2.0: Switch to HTML5 player as default (one-time)
+            // Migration v2.8.4: Force switch ALL users to HTML5 player (one-time)
             // HTML5 player is more stable and works across all platforms
-            if (!s._migratedToHTML5V2) {
-                console.log('[Settings] Auto-switching to HTML5 player (v2.0 update)');
+            // This migration runs for ALL users regardless of current setting
+            if (!s._migratedToHTML5V284) {
+                console.log('[Settings] Auto-switching to HTML5 player (v2.8.4 update) - Current player:', s.playerType);
                 s.playerType = 'builtin';
-                s._migratedToHTML5V2 = true;
+                s._migratedToHTML5V284 = true;
                 writeSettings(s);
+                console.log('[Settings] Player switched to HTML5 (builtin)');
             }
             
             return {
