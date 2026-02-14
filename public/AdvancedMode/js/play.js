@@ -25,7 +25,7 @@ import {
     formatStremioMeta,
     getVideoId
 } from './stremio-addon.js';
-import { filterTorrents } from './torrent_filter.js';
+import { filterTorrents, parseSceneInfo } from './torrent_filter.js';
 
 // Helper functions for parsing torrent/stream info
 const detectQuality = (title) => {
@@ -89,8 +89,8 @@ let currentSeason = urlSeason ? parseInt(urlSeason) : 1;
 let currentEpisode = urlEpisode ? parseInt(urlEpisode) : null;
 let currentImdbId = null;
 let allSources = [];
-// Set default provider - if addonId is in URL, use that, otherwise default to jackett
-let currentProvider = addonId || 'jackett';
+// Set default provider - if addonId is in URL, use that, otherwise default to PlayTorrio
+let currentProvider = addonId || 'torrentless';
 
 // DOM Elements
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -609,11 +609,10 @@ const renderDetails = (data) => {
     if (data.genres && genresEl) {
         genresEl.innerHTML = '';
         data.genres.forEach(genre => {
-            const a = document.createElement('a');
-            a.className = 'px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-sm border border-purple-500/30 hover:bg-purple-600 hover:text-white transition-colors cursor-pointer';
-            a.textContent = genre.name;
-            a.href = `grid.html?type=genre&id=${genre.id}&name=${encodeURIComponent(genre.name)}`;
-            genresEl.appendChild(a);
+            const span = document.createElement('span');
+            span.className = 'px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-sm border border-purple-500/30';
+            span.textContent = genre.name;
+            genresEl.appendChild(span);
         });
     }
     const director = data.credits?.crew?.find(c => c.job === 'Director')?.name;
@@ -630,11 +629,10 @@ const renderDetails = (data) => {
     if (data.credits?.cast && castEl) {
         castEl.innerHTML = '';
         data.credits.cast.slice(0, 8).forEach(member => {
-            const a = document.createElement('a');
-            a.className = 'px-3 py-1.5 bg-gray-800/60 text-gray-300 rounded-full text-sm hover:bg-gray-700 hover:text-white transition-colors cursor-pointer';
-            a.textContent = member.name;
-            a.href = `grid.html?type=person&id=${member.id}&name=${encodeURIComponent(member.name)}`;
-            castEl.appendChild(a);
+            const span = document.createElement('span');
+            span.className = 'px-3 py-1.5 bg-gray-800/60 text-gray-300 rounded-full text-sm';
+            span.textContent = member.name;
+            castEl.appendChild(span);
         });
     }
 };
@@ -1347,8 +1345,8 @@ const renderSources = async () => {
                 return;
             }
         } else if (currentProvider === 'torrentless') {
-            // PlayTorrio (Torrentless) native source - torrent search via UIndex & Knaben
-            console.log('[Sources] Fetching from Torrentless (PlayTorrio)...');
+            // PlayTorrio (Ultimate) native source - aggregates 12 torrent sources
+            console.log('[Sources] Fetching from PlayTorrio Ultimate...');
             
             try {
                 const title = currentDetails?.title || currentDetails?.name || '';
@@ -1373,29 +1371,29 @@ const renderSources = async () => {
                     queries.push(`${title} ${year}`);
                 }
                 
-                console.log('[Torrentless] Searching with queries:', queries);
+                console.log('[PlayTorrio Ultimate] Searching with queries:', queries);
                 
-                // Fetch results for all queries in parallel
+                // Fetch results for all queries in parallel using the new ultimate endpoint
                 const results = await Promise.all(
                     queries.map(async (query) => {
-                        const torrentlessUrl = `http://localhost:6987/torrentless/api/search?q=${encodeURIComponent(query)}&page=1`;
-                        console.log('[Torrentless] Fetching:', torrentlessUrl);
+                        const ultimateUrl = `http://localhost:6987/api/ultimate?query=${encodeURIComponent(query)}`;
+                        console.log('[PlayTorrio Ultimate] Fetching:', ultimateUrl);
                         
-                        const response = await fetch(torrentlessUrl);
+                        const response = await fetch(ultimateUrl);
                         
                         if (!response.ok) {
-                            console.error(`[Torrentless] API Error for query "${query}":`, response.status);
+                            console.error(`[PlayTorrio Ultimate] API Error for query "${query}":`, response.status);
                             return [];
                         }
                         
                         const data = await response.json();
                         
                         if (data.error) {
-                            console.error(`[Torrentless] Error for query "${query}":`, data.error);
+                            console.error(`[PlayTorrio Ultimate] Error for query "${query}":`, data.error);
                             return [];
                         }
                         
-                        return data.items || [];
+                        return data.results || [];
                     })
                 );
                 
@@ -1405,29 +1403,31 @@ const renderSources = async () => {
                 const uniqueItems = [];
                 
                 allItems.forEach(item => {
-                    const id = item.magnet || item.title;
+                    const id = item.magnet || item.name;
                     if (id && !seen.has(id)) {
                         seen.add(id);
                         uniqueItems.push(item);
                     }
                 });
                 
-                console.log('[Torrentless] Found', uniqueItems.length, 'unique results from', queries.length, 'queries');
+                console.log('[PlayTorrio Ultimate] Found', uniqueItems.length, 'unique results from', queries.length, 'queries');
                 
                 if (uniqueItems.length === 0) {
                     allSources = [];
                 } else {
-                    // Convert torrentless items to standard format for filtering
+                    // Convert ultimate items to standard format for filtering
                     const convertedItems = uniqueItems.map(item => {
-                        const itemTitle = item.name || item.title || 'Unknown';
-                        const seeders = parseInt((item.seeds || '0').toString().replace(/,/g, ''), 10) || 0;
+                        const itemTitle = item.name || 'Unknown';
+                        const seeders = parseInt((item.seeders || '0').toString().replace(/,/g, ''), 10) || 0;
+                        const sizeStr = item.size || 'Unknown';
                         
                         return {
                             Title: itemTitle,
-                            Size: parseSize(item.size || '0'),
+                            Size: sizeStr,  // Keep original size string
+                            SizeBytes: parseSize(sizeStr),  // Add bytes for sorting
                             Seeders: seeders,
                             Peers: 0,
-                            Tracker: 'PlayTorrio',
+                            Tracker: item.source || 'PlayTorrio',
                             Link: null,
                             MagnetUri: item.magnet,
                             Guid: item.magnet
@@ -1443,12 +1443,12 @@ const renderSources = async () => {
                         year: year
                     };
                     
-                    console.log('[Torrentless] Applying filters with metadata:', metadata);
+                    console.log('[PlayTorrio Ultimate] Applying filters with metadata:', metadata);
                     allSources = filterTorrents(convertedItems, metadata);
-                    console.log('[Torrentless] After filtering:', allSources.length, 'results');
+                    console.log('[PlayTorrio Ultimate] After filtering:', allSources.length, 'results');
                 }
             } catch (err) {
-                console.error('[Torrentless] Error:', err);
+                console.error('[PlayTorrio Ultimate] Error:', err);
                 allSources = [];
                 sourcesList.innerHTML = `<div class="text-center py-12 text-red-400">PlayTorrio connection failed. Make sure the app server is running.</div>`;
                 return;

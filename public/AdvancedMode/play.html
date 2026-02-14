@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayTorrio</title>
     <link rel="stylesheet" href="css/titlebar.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -143,20 +143,6 @@
             box-shadow: 0 0 30px rgba(139, 92, 246, 0.6) !important;
         }
     </style>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'primary-purple': '#7c3aed',
-              'primary-blue': '#3b82f6',
-              'bg-dark': '#0a0a0f',
-              'bg-card': '#14141f',
-            }
-          }
-        }
-      }
-    </script>
 </head>
 <body class="bg-bg-dark text-white edge-glow min-h-screen pt-12">
     <!-- Custom Title Bar -->
@@ -198,10 +184,9 @@
 
     <!-- Backdrop -->
     <div class="fixed inset-0 z-0">
-        <div id="backdrop-image" class="absolute inset-0 bg-cover bg-center transition-opacity duration-700 opacity-0"></div>
+        <div id="backdrop-image" class="absolute inset-0 bg-cover bg-center transition-opacity duration-700 opacity-0" style="filter: brightness(0.3) blur(10px);"></div>
         <div class="absolute inset-0 bg-gradient-to-r from-black via-black/95 to-black/70"></div>
         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-[#0a0a0f]/50"></div>
-        <div class="absolute inset-0 backdrop-blur-sm"></div>
     </div>
 
     <!-- Content -->

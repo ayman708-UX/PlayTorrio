@@ -22,21 +22,12 @@ jobs:
 
       - run: npm install
 
-      - name: Setup Windows Players
+      - name: Download latest yt-dlp (Windows)
         run: |
-          if (Test-Path "yt.zip") {
-            7z x yt.zip -y
-            Remove-Item yt.zip -Force
-          } elseif (Test-Path "yt.rar") {
-            7z x yt.rar -y
-            Remove-Item yt.rar -Force
-          }
-
-          # FLATTEN yt/yt -> yt
-          if (Test-Path "yt\yt\yt-dlp.exe") {
-            Move-Item yt\yt\yt-dlp.exe yt\yt-dlp.exe -Force
-            Remove-Item yt\yt -Recurse -Force
-          }
+          New-Item -ItemType Directory -Path yt -Force
+          $url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+          Invoke-WebRequest -Uri $url -OutFile yt\yt-dlp.exe
+          Write-Host "✓ Downloaded latest yt-dlp.exe"
 
       - name: Check yt-dlp (Windows)
         run: |
@@ -147,29 +138,16 @@ jobs:
 
       - run: npm install
 
-      - name: Extract yt-dlp (Linux)
+      - name: Download latest yt-dlp (Linux)
         run: |
-          if [ -f linyt.zip ]; then
-            unzip -q linyt.zip
-            rm -f linyt.zip
-          elif [ -f linyt.rar ]; then
-            sudo apt-get update -y
-            sudo apt-get install -y unar
-            unar -o . linyt.rar
-            rm -f linyt.rar
-          fi
-
-          # FLATTEN linyt/linyt -> linyt
-          if [ -f linyt/linyt/yt-dlp_linux ]; then
-            mv linyt/linyt/yt-dlp_linux linyt/yt-dlp_linux
-            chmod +x linyt/yt-dlp_linux
-            rm -rf linyt/linyt
-          fi
+          mkdir -p linyt
+          curl -L -o linyt/yt-dlp_linux https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
+          chmod +x linyt/yt-dlp_linux
+          echo "✓ Downloaded latest yt-dlp_linux"
 
       - name: Check yt-dlp (Linux)
         run: |
-          if [ -f linyt/yt-dlp_linux ] || [ -f linyt/yt-dlp ]; then
-            chmod +x linyt/yt-dlp* || true
+          if [ -f linyt/yt-dlp_linux ]; then
             echo "✓ yt-dlp found"
           else
             echo "❌ yt-dlp not found" && exit 1
@@ -248,23 +226,12 @@ jobs:
           npm rebuild --arch=x64 --verbose
           echo "✓ Native modules rebuilt for x64"
 
-      - name: Extract yt-dlp (macOS)
+      - name: Download latest yt-dlp (macOS)
         run: |
-          if [ -f macyt.zip ]; then
-            unzip -q macyt.zip
-            rm -f macyt.zip
-          elif [ -f macyt.rar ]; then
-            brew install unar || true
-            unar -o . macyt.rar
-            rm -f macyt.rar
-          fi
-
-          # FLATTEN macyt/macyt -> macyt
-          if [ -f macyt/macyt/yt-dlp_macos ]; then
-            mv macyt/macyt/yt-dlp_macos macyt/yt-dlp_macos
-            chmod +x macyt/yt-dlp_macos
-            rm -rf macyt/macyt
-          fi
+          mkdir -p macyt
+          curl -L -o macyt/yt-dlp_macos https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos
+          chmod +x macyt/yt-dlp_macos
+          echo "✓ Downloaded latest yt-dlp_macos"
 
       - name: Check yt-dlp (macOS x64)
         run: |
@@ -367,22 +334,12 @@ jobs:
 
       - run: npm install --verbose || npm install --verbose || npm install --verbose
 
-      - name: Extract yt-dlp (macOS)
+      - name: Download latest yt-dlp (macOS)
         run: |
-          if [ -f macyt.zip ]; then
-            unzip -q macyt.zip
-            rm -f macyt.zip
-          elif [ -f macyt.rar ]; then
-            brew install unar || true
-            unar -o . macyt.rar
-            rm -f macyt.rar
-          fi
-
-          if [ -f macyt/macyt/yt-dlp_macos ]; then
-            mv macyt/macyt/yt-dlp_macos macyt/yt-dlp_macos
-            chmod +x macyt/yt-dlp_macos
-            rm -rf macyt/macyt
-          fi
+          mkdir -p macyt
+          curl -L -o macyt/yt-dlp_macos https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos
+          chmod +x macyt/yt-dlp_macos
+          echo "✓ Downloaded latest yt-dlp_macos"
 
       - name: Check yt-dlp (macOS arm64)
         run: |

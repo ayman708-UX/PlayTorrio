@@ -828,25 +828,33 @@ function resolveYtdlpExe() {
 
         if (process.platform === 'win32') {
             if (resourcesPath) {
-                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'windlp', 'yt-dlp.exe'));
-                candidates.push(path.join(resourcesPath, 'windlp', 'yt-dlp.exe'));
+                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'yt', 'yt-dlp.exe'));
+                candidates.push(path.join(resourcesPath, 'yt', 'yt-dlp.exe'));
             }
-            candidates.push(path.join(execDir, 'windlp', 'yt-dlp.exe'));
-            candidates.push(path.join(__dirname, 'windlp', 'yt-dlp.exe'));
+            candidates.push(path.join(execDir, 'yt', 'yt-dlp.exe'));
+            candidates.push(path.join(__dirname, 'yt', 'yt-dlp.exe'));
         } else if (process.platform === 'darwin') {
             if (resourcesPath) {
-                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'macdlp', 'yt-dlp'));
-                candidates.push(path.join(resourcesPath, 'macdlp', 'yt-dlp'));
+                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'macyt', 'yt-dlp_macos'));
+                candidates.push(path.join(resourcesPath, 'macyt', 'yt-dlp_macos'));
+                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'macyt', 'yt-dlp'));
+                candidates.push(path.join(resourcesPath, 'macyt', 'yt-dlp'));
             }
-            candidates.push(path.join(execDir, 'macdlp', 'yt-dlp'));
-            candidates.push(path.join(__dirname, 'macdlp', 'yt-dlp'));
+            candidates.push(path.join(execDir, 'macyt', 'yt-dlp_macos'));
+            candidates.push(path.join(__dirname, 'macyt', 'yt-dlp_macos'));
+            candidates.push(path.join(execDir, 'macyt', 'yt-dlp'));
+            candidates.push(path.join(__dirname, 'macyt', 'yt-dlp'));
         } else { // linux
             if (resourcesPath) {
-                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'linuxdlp', 'yt-dlp'));
-                candidates.push(path.join(resourcesPath, 'linuxdlp', 'yt-dlp'));
+                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'linyt', 'yt-dlp_linux'));
+                candidates.push(path.join(resourcesPath, 'linyt', 'yt-dlp_linux'));
+                candidates.push(path.join(resourcesPath, 'app.asar.unpacked', 'linyt', 'yt-dlp'));
+                candidates.push(path.join(resourcesPath, 'linyt', 'yt-dlp'));
             }
-            candidates.push(path.join(execDir, 'linuxdlp', 'yt-dlp'));
-            candidates.push(path.join(__dirname, 'linuxdlp', 'yt-dlp'));
+            candidates.push(path.join(execDir, 'linyt', 'yt-dlp_linux'));
+            candidates.push(path.join(__dirname, 'linyt', 'yt-dlp_linux'));
+            candidates.push(path.join(execDir, 'linyt', 'yt-dlp'));
+            candidates.push(path.join(__dirname, 'linyt', 'yt-dlp'));
         }
 
         for (const p of candidates) {

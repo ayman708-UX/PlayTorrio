@@ -528,6 +528,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('backBtn');
     if (backBtn) {
         backBtn.addEventListener('click', () => {
+            // Set skipIntro flag to skip intro when going back to home
+            sessionStorage.setItem('skipIntro', 'true');
+            
             // Check if we came from search results (check sessionStorage)
             const savedSearchState = sessionStorage.getItem('searchState');
             if (savedSearchState) {
@@ -543,6 +546,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Error parsing search state:', e);
                 }
             }
+            
+            // Check if we came from play page - if so, go to home instead
+            if (document.referrer && document.referrer.includes('play.html')) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
             // Default: go back in history
             window.history.back();
         });

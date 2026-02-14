@@ -181,8 +181,8 @@ export const filterTorrents = (torrents, metadata) => {
     return filtered.map(t => ({
         id: t.Guid || t.Link,
         title: t.Title,
-        size: t.Size ? (t.Size / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'N/A',
-        sizeBytes: parseInt(t.Size) || 0,
+        size: typeof t.Size === 'string' ? t.Size : (t.Size ? (t.Size / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'N/A'),
+        sizeBytes: t.SizeBytes || parseInt(t.Size) || 0,
         seeders: t.Seeders,
         peers: t.Peers,
         publishDate: t.PublishDate,

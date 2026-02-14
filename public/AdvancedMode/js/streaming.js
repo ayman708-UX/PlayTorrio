@@ -133,6 +133,11 @@ const PROVIDERS = {
         name: 'Vidzee',
         movie: (tmdbId) => `https://player.vidzee.wtf/embed/movie/${tmdbId}`,
         tv: (tmdbId, season, episode) => `https://player.vidzee.wtf/embed/tv/${tmdbId}/${season}/${episode}`
+    },
+    rayflix: {
+        name: 'Rayflix',
+        movie: (tmdbId) => `https://mov-web.cometclient.dev/movie/watch/${tmdbId}`,
+        tv: (tmdbId, season, episode) => `https://mov-web.cometclient.dev/tv/watch/${tmdbId}/${season}/${episode}`
     }
 };
 
