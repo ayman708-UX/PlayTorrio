@@ -543,14 +543,14 @@ async function initTorrentEngineUI() {
         hybrid: "Hybrid mode uses BOTH WebTorrent and TorrentStream for maximum speed!"
     };
     
-    let currentEngine = 'stremio';
-    let currentInstances = 1;
+    let currentEngine = 'torrentstream'; // DEFAULT TO TORRENTSTREAM
+    let currentInstances = 5; // DEFAULT TO 5 INSTANCES
     
     try {
         const engineConfig = await fetch('/api/torrent-engine/config').then(r => r.json());
         if (engineConfig && engineConfig.engine) {
             currentEngine = engineConfig.engine;
-            currentInstances = engineConfig.instances || 1;
+            currentInstances = engineConfig.instances || 5;
             console.log(`[Settings] Loaded engine: ${currentEngine}, instances: ${currentInstances}`);
         }
     } catch (e) {
@@ -559,12 +559,15 @@ async function initTorrentEngineUI() {
             const settings = await getSettings();
             if (settings.torrentEngine) {
                 currentEngine = settings.torrentEngine;
+            } else {
+                // Force save the new default
+                await saveSettings({ torrentEngine: 'torrentstream', torrentEngineInstances: 5 });
             }
             if (settings.torrentEngineInstances) {
                 currentInstances = settings.torrentEngineInstances;
             }
         } catch (settingsError) {
-            console.warn('[Settings] Using default stremio');
+            console.warn('[Settings] Using default torrentstream with 5 instances');
         }
     }
     

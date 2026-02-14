@@ -12,11 +12,13 @@ const selectedFiles = new Map();
  * Register Stremio engine routes
  */
 export function registerStremioRoutes(app, userDataPath, ffmpegBin = null, ffprobeBin = null) {
-    // Start engine with FFmpeg paths
+    // Start engine immediately on app startup (idle/warm start)
+    console.log('[StremioRoutes] Starting engine on app startup...');
     StremioEngine.startEngine(userDataPath, ffmpegBin, ffprobeBin).then(() => {
-        console.log('[StremioRoutes] ⚡ Engine started');
+        console.log('[StremioRoutes] ⚡ Engine started and ready (idle mode)');
     }).catch(err => {
-        console.error('[StremioRoutes] Failed to start engine:', err.message);
+        console.error('[StremioRoutes] Failed to start engine on startup:', err.message);
+        console.log('[StremioRoutes] Engine will auto-start on first request');
     });
 
     // ============================================================================
@@ -31,7 +33,7 @@ export function registerStremioRoutes(app, userDataPath, ffmpegBin = null, ffpro
             if (!StremioEngine.isEngineReady()) {
                 console.log('[StremioRoutes] Engine not ready, starting...');
                 try {
-                    await StremioEngine.startEngine(userDataPath);
+                    await StremioEngine.startEngine(userDataPath, ffmpegBin, ffprobeBin);
                 } catch (startError) {
                     console.error('[StremioRoutes] Failed to start engine:', startError.message);
                     return res.status(503).json({ error: 'Failed to start engine: ' + startError.message });
@@ -39,7 +41,10 @@ export function registerStremioRoutes(app, userDataPath, ffmpegBin = null, ffpro
             }
             
             console.log(`[StremioRoutes] Getting files: ${magnet.substring(0, 60)}...`);
+            
+            // No timeout - let the user cancel via the UI cancel button
             const result = await StremioEngine.getTorrentFiles(magnet);
+            
             res.json(result);
         } catch (error) {
             console.error('[StremioRoutes] Get files error:', error.message);

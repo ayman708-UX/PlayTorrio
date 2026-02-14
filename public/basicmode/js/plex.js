@@ -902,11 +902,11 @@ async function playPlexItem(item) {
     }
     
     // Get player preference
-    let playerPreference = 'playtorrio';
+    let playerPreference = 'builtin';
     try {
         const settingsRes = await fetch('/api/settings');
         const settings = await settingsRes.json();
-        playerPreference = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'playtorrio');
+        playerPreference = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'builtin');
         console.log('[Plex] Player preference from API:', playerPreference);
     } catch (e) {
         console.error('[Plex] Failed to load player preference:', e);

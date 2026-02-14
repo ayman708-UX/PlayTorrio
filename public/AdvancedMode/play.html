@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayTorrio</title>
     <link rel="stylesheet" href="css/titlebar.css">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -179,7 +179,10 @@
     <!-- Play Loading Overlay (fullscreen black when starting playback) -->
     <div id="play-loading-overlay" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black hidden">
         <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-        <p id="play-loading-text" class="text-white/70 text-lg">Preparing stream...</p>
+        <p id="play-loading-text" class="text-white/70 text-lg mb-6">Preparing stream...</p>
+        <button id="cancel-loading-btn" class="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors">
+            Cancel
+        </button>
     </div>
 
     <!-- Backdrop -->

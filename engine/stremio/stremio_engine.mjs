@@ -139,6 +139,8 @@ export async function startEngine(userDataPath, ffmpegBin = null, ffprobeBin = n
         ...process.env,
         STREMIO_CACHE: cachePath,
         ENGINE_PORT: String(ENGINE_PORT),
+        STREAMING_SERVER_PORT: String(ENGINE_PORT),  // New server.js uses this
+        PORT: String(ENGINE_PORT),  // Fallback
         NO_CORS: '1',
         APP_PATH: cachePath,
         STREMIO_PATH: cachePath
@@ -301,33 +303,59 @@ export async function addTorrent(magnet) {
         throw new Error('Invalid magnet link');
     }
     
+    console.log(`[StremioEngine] Creating torrent for ${infoHash.substring(0, 8)}...`);
+    
     try {
-        // Create torrent in engine
-        const response = await fetch(`${ENGINE_URL}/${infoHash}/create`, {
+        // Create torrent in engine - use settings similar to actual Stremio
+        const createUrl = `${ENGINE_URL}/${infoHash}/create`;
+        const createBody = {
+            uri: magnet,
+            // Use Stremio's actual peer search settings
+            peerSearch: { 
+                min: 5,   // btMinPeersForStable from Stremio settings
+                max: 55,  // btMaxConnections from Stremio settings
+                sources: [
+                    'dht:' + infoHash,
+                    'tracker:' + infoHash
+                ]
+            }
+        };
+        
+        console.log(`[StremioEngine] POST ${createUrl}`);
+        console.log(`[StremioEngine] Body:`, JSON.stringify(createBody, null, 2));
+        
+        // The /create endpoint in server.cjs waits for the engine to be ready before responding,
+        // which can take a long time. So we'll fire the request and don't wait for response.
+        // Instead, we'll immediately start polling the stats endpoint.
+        
+        // Fire and forget the create request
+        fetch(createUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                uri: magnet,
-                peerSearch: { min: 40, max: 200, sources: ['dht:' + infoHash] }
-            })
+            body: JSON.stringify(createBody)
+        }).catch(e => {
+            console.error(`[StremioEngine] Create request error:`, e.message);
         });
         
-        if (!response.ok) {
-            throw new Error(`Failed to create torrent: ${response.status}`);
-        }
+        console.log(`[StremioEngine] Create request sent, will poll for metadata...`);
         
-        const data = await response.json();
+        // IMPORTANT: To trigger metadata fetching in torrent-stream, we need to actually
+        // request a file. Make a HEAD request to file 0 to trigger the download.
+        // This is fire-and-forget, just to wake up the engine.
+        setTimeout(() => {
+            console.log(`[StremioEngine] Triggering metadata fetch by requesting file 0...`);
+            fetch(`${ENGINE_URL}/${infoHash}/0`, { method: 'HEAD' })
+                .catch(e => console.log(`[StremioEngine] File trigger request (expected to fail):`, e.message));
+        }, 1000);
         
         // Track locally
         activeTorrents.set(infoHash, { magnet, addedAt: Date.now() });
         torrentTimestamps.set(infoHash, Date.now());
         
-        console.log(`[StremioEngine] ⚡ Added: ${infoHash.substring(0, 8)}...`);
-        
+        // Return immediately with empty files - we'll poll for them
         return {
             infoHash,
-            files: data.files || [],
-            ...data
+            files: []
         };
     } catch (error) {
         console.error('[StremioEngine] Add error:', error.message);
@@ -339,8 +367,65 @@ export async function addTorrent(magnet) {
  * Get torrent files
  */
 export async function getTorrentFiles(magnet) {
+    console.log(`[StremioEngine] getTorrentFiles called`);
     const result = await addTorrent(magnet);
     
+    console.log(`[StremioEngine] addTorrent returned, files count: ${result.files?.length || 0}`);
+    
+    // If files are already available, return immediately
+    if (result.files && result.files.length > 0) {
+        console.log(`[StremioEngine] Files available immediately, processing...`);
+        return processFiles(result);
+    }
+    
+    // Otherwise, poll for metadata (max 2 minutes)
+    const infoHash = result.infoHash;
+    const maxAttempts = 120; // 2 minutes with 1 second intervals
+    
+    console.log(`[StremioEngine] No files yet, waiting for engine to fetch metadata...`);
+    console.log(`[StremioEngine] This can take 10-30 seconds depending on seeders and DHT response`);
+    
+    // Give the engine some time to start connecting to peers before we start polling
+    console.log(`[StremioEngine] Initial wait: 3 seconds...`);
+    await new Promise(r => setTimeout(r, 3000));
+    
+    for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second between polls
+        
+        try {
+            const stats = await getStats(infoHash);
+            
+            if (stats) {
+                console.log(`[StremioEngine] Poll ${i + 1}/${maxAttempts}: Got stats with keys:`, Object.keys(stats));
+                
+                // Check multiple possible locations for files
+                const files = stats.files || stats.torrent?.files || [];
+                
+                if (files.length > 0) {
+                    console.log(`[StremioEngine] ✓ Metadata received after ${i + 3} seconds, ${files.length} files`);
+                    return processFiles({ ...result, files, ...stats });
+                }
+                
+                // Log progress indicators
+                if (stats.peers !== undefined) {
+                    console.log(`[StremioEngine] Poll ${i + 1}: ${stats.peers || 0} peers, ${stats.downloaded || 0} bytes downloaded`);
+                }
+            } else {
+                if (i % 10 === 0) { // Log every 10 seconds
+                    console.log(`[StremioEngine] Poll ${i + 1}/${maxAttempts}: Still waiting for stats...`);
+                }
+            }
+        } catch (e) {
+            console.error(`[StremioEngine] Poll ${i + 1} error:`, e.message);
+            // Continue polling
+        }
+    }
+    
+    console.error(`[StremioEngine] Timeout after ${maxAttempts} seconds`);
+    throw new Error('Timeout waiting for torrent metadata');
+}
+
+function processFiles(result) {
     const videoRegex = /\.(mp4|mkv|avi|mov|webm|m4v|wmv|flv|ts|m2ts)$/i;
     const subRegex = /\.(srt|vtt|ass|ssa|sub)$/i;
     
@@ -386,15 +471,33 @@ export function getStreamUrl(infoHash, fileIndex) {
  * Get torrent stats
  */
 export async function getStats(infoHash) {
-    if (!isReady) return null;
+    if (!isReady) {
+        console.log(`[StremioEngine] getStats: Engine not ready`);
+        return null;
+    }
     
     try {
-        const response = await fetch(`${ENGINE_URL}/${infoHash}/stats.json`);
+        const statsUrl = `${ENGINE_URL}/${infoHash}/stats.json`;
+        const response = await fetch(statsUrl, { timeout: 5000 });
+        
         if (response.ok) {
+            const stats = await response.json();
             torrentTimestamps.set(infoHash, Date.now());
-            return await response.json();
+            
+            // Log what we got
+            if (stats) {
+                const keys = Object.keys(stats);
+                const hasFiles = stats.files || stats.torrent?.files;
+                console.log(`[StremioEngine] getStats: Got response with keys [${keys.join(', ')}], files: ${hasFiles ? hasFiles.length : 0}`);
+            }
+            
+            return stats;
+        } else {
+            console.log(`[StremioEngine] getStats: Response not OK (${response.status})`);
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error(`[StremioEngine] getStats error:`, e.message);
+    }
     
     return null;
 }

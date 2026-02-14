@@ -289,12 +289,12 @@ export const initNodeMPVUI = async () => {
     const settings = await getDebridSettings();
     
     // Determine current player type from settings
-    let currentPlayerType = 'playtorrio'; // default
+    let currentPlayerType = 'builtin'; // default
     if (settings.playerType) {
         currentPlayerType = settings.playerType;
-        // If non-Windows and somehow set to nodempv, reset to playtorrio
+        // If non-Windows and somehow set to nodempv, reset to builtin
         if (!isWindows && currentPlayerType === 'nodempv') {
-            currentPlayerType = 'playtorrio';
+            currentPlayerType = 'builtin';
         }
     } else if (settings.useNodeMPV && isWindows) {
         // Legacy support: if useNodeMPV was true on Windows, set to nodempv
@@ -391,30 +391,33 @@ export const initTorrentEngineUI = async () => {
     };
     
     // Load current settings from BOTH sources (server engine config takes priority)
-    let currentEngine = 'stremio';
-    let currentInstances = 1;
+    let currentEngine = 'torrentstream'; // DEFAULT TO TORRENTSTREAM
+    let currentInstances = 5; // DEFAULT TO 5 INSTANCES
     
     try {
         // First try to get from engine config API (actual running state)
         const engineConfig = await fetch('/api/torrent-engine/config').then(r => r.json());
         if (engineConfig && engineConfig.engine) {
             currentEngine = engineConfig.engine;
-            currentInstances = engineConfig.instances || 1;
+            currentInstances = engineConfig.instances || 5;
             console.log(`[TorrentEngineUI] Loaded from server: ${currentEngine}, instances: ${currentInstances}`);
         }
     } catch (e) {
         console.warn('[TorrentEngineUI] Failed to load engine config from server:', e);
-        // Fallback to settings, but still default to 'stremio'
+        // Fallback to settings, default to torrentstream with 5 instances
         try {
             const settings = await getDebridSettings();
             if (settings.torrentEngine) {
                 currentEngine = settings.torrentEngine;
+            } else {
+                // Force save the new default
+                await saveDebridSettings({ torrentEngine: 'torrentstream', torrentEngineInstances: 5 });
             }
             if (settings.torrentEngineInstances) {
                 currentInstances = settings.torrentEngineInstances;
             }
         } catch (settingsError) {
-            console.warn('[TorrentEngineUI] Failed to load settings, using default stremio');
+            console.warn('[TorrentEngineUI] Failed to load settings, using default torrentstream with 5 instances');
         }
     }
     

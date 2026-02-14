@@ -285,8 +285,8 @@ class TorrentStreamEngine {
     /**
      * Start the engine with specified number of instances
      */
-    async start(instanceCount = 1) {
-        this.instanceCount = Math.min(Math.max(instanceCount, 1), 3);
+    async start(instanceCount = 5) {
+        this.instanceCount = Math.min(Math.max(instanceCount, 1), 5); // Allow up to 5 instances
         
         for (let i = 0; i < this.instanceCount; i++) {
             const instance = new TorrentStreamInstance(++instanceCounter);
@@ -294,7 +294,7 @@ class TorrentStreamEngine {
         }
 
         this.isReady = true;
-        console.log(`[TorrentStreamEngine] Started with ${this.instanceCount} instance(s)`);
+        console.log(`[TorrentStreamEngine] Started with ${this.instanceCount} instance(s) for maximum peer discovery`);
         return { success: true, instances: this.instanceCount };
     }
 
@@ -437,7 +437,7 @@ export function getEngine() {
     return engineInstance;
 }
 
-export async function startEngine(instanceCount = 1) {
+export async function startEngine(instanceCount = 5) {
     const engine = getEngine();
     if (engine.isReady) {
         return { success: true, instances: engine.instanceCount };

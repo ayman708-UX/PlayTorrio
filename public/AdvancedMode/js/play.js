@@ -290,8 +290,8 @@ async function openPlayerInIframe(options) {
         const settingsRes = await fetch('/api/settings');
         const settings = await settingsRes.json();
         
-        // Determine player type (default to playtorrio)
-        const playerType = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'playtorrio');
+        // Determine player type (default to builtin/HTML5)
+        const playerType = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'builtin');
         
         if (playerType === 'nodempv') {
             // Use NodeMPV player via Electron IPC

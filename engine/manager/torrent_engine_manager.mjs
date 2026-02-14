@@ -19,8 +19,8 @@ export const ENGINE_TYPES = {
 };
 
 // Current configuration
-let currentEngine = ENGINE_TYPES.STREMIO;
-let instanceCount = 1;
+let currentEngine = ENGINE_TYPES.TORRENTSTREAM; // Default to torrent-stream for better performance
+let instanceCount = 5; // Default to 5 instances for maximum peer discovery
 let userDataPath = null;
 let engineStopped = false; // Flag to prevent auto-restart after explicit stop
 
@@ -51,9 +51,21 @@ export async function initialize(dataPath) {
     const settings = loadSettings();
     if (settings.torrentEngine) {
         currentEngine = settings.torrentEngine;
+        
+        // MIGRATION: Auto-migrate Stremio users to TorrentStream for better performance
+        if (currentEngine === ENGINE_TYPES.STREMIO) {
+            console.log(`[EngineManager] Migrating from Stremio to TorrentStream for better performance`);
+            currentEngine = ENGINE_TYPES.TORRENTSTREAM;
+            instanceCount = 5;
+            saveSettings({
+                torrentEngine: currentEngine,
+                torrentEngineInstances: instanceCount,
+            });
+        }
     } else {
-        // Default to Stremio for new installations
-        currentEngine = ENGINE_TYPES.STREMIO;
+        // Default to TorrentStream with 5 instances for new installations
+        currentEngine = ENGINE_TYPES.TORRENTSTREAM;
+        instanceCount = 5;
         // Save the default
         saveSettings({
             torrentEngine: currentEngine,
@@ -62,6 +74,16 @@ export async function initialize(dataPath) {
     }
     if (settings.torrentEngineInstances) {
         instanceCount = settings.torrentEngineInstances;
+        
+        // MIGRATION: Auto-upgrade users from 3 to 5 instances
+        if (instanceCount === 3 && currentEngine === ENGINE_TYPES.TORRENTSTREAM) {
+            console.log(`[EngineManager] Migrating from 3 to 5 instances for better performance`);
+            instanceCount = 5;
+            saveSettings({
+                torrentEngine: currentEngine,
+                torrentEngineInstances: instanceCount,
+            });
+        }
     }
     
     console.log(`[EngineManager] Initialized with engine: ${currentEngine}, instances: ${instanceCount}`);
@@ -112,7 +134,7 @@ export async function setEngine(engineType, instances = 1) {
     }
     
     currentEngine = engineType;
-    instanceCount = Math.min(Math.max(instances, 1), 3);
+    instanceCount = Math.min(Math.max(instances, 1), 5); // Allow up to 5 instances
     
     // Save settings
     saveSettings({

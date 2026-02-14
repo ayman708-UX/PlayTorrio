@@ -1268,6 +1268,15 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
                 writeSettings(s);
             }
             
+            // Migration v2.0: Switch to HTML5 player as default (one-time)
+            // HTML5 player is more stable and works across all platforms
+            if (!s._migratedToHTML5V2) {
+                console.log('[Settings] Auto-switching to HTML5 player (v2.0 update)');
+                s.playerType = 'builtin';
+                s._migratedToHTML5V2 = true;
+                writeSettings(s);
+            }
+            
             return {
                 autoUpdate: true,
                 useTorrentless: false,
@@ -1284,7 +1293,7 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
                 pmApiKey: null,
                 useNodeMPV: false, // Windows only - use MPV player instead of HTML5
                 mpvPath: null, // Custom path to mpv.exe
-                playerType: 'playtorrio', // Default player: 'builtin', 'playtorrio', 'nodempv'
+                playerType: 'builtin', // Default player: 'builtin', 'playtorrio', 'nodempv'
                 ...s,
             };
         } catch {
@@ -1304,7 +1313,7 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
                 pmApiKey: null, 
                 useNodeMPV: false, 
                 mpvPath: null,
-                playerType: 'playtorrio' // Default for new users
+                playerType: 'builtin' // Default for new users
             };
         }
     }
@@ -1384,13 +1393,13 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
             jackettUrl: userSettings.jackettUrl || JACKETT_URL,
             prowlarrUrl: userSettings.prowlarrUrl || PROWLARR_URL,
             cacheLocation: userSettings.cacheLocation || CACHE_LOCATION,
-            playerType: s.playerType || 'playtorrio',
+            playerType: s.playerType || 'builtin',
             useNodeMPV: !!s.useNodeMPV,
             mpvPath: s.mpvPath || null,
             discordActivity: s.discordActivity !== false,
             showSponsor: s.showSponsor !== false,
-            torrentEngine: s.torrentEngine || 'stremio',
-            torrentEngineInstances: s.torrentEngineInstances || 1,
+            torrentEngine: s.torrentEngine || 'torrent-stream',
+            torrentEngineInstances: s.torrentEngineInstances || 3,
             streamingMode: s.streamingMode !== false // Default to true
         });
     });
@@ -1509,8 +1518,8 @@ export function startServer(userDataPath, executablePath = null, ffmpegBin = nul
             mpvPath: req.body.mpvPath !== undefined ? (req.body.mpvPath || null) : (s.mpvPath || null),
             discordActivity: req.body.discordActivity !== undefined ? !!req.body.discordActivity : (s.discordActivity !== false),
             showSponsor: req.body.showSponsor !== undefined ? !!req.body.showSponsor : (s.showSponsor !== false),
-            torrentEngine: req.body.torrentEngine !== undefined ? req.body.torrentEngine : (s.torrentEngine || 'stremio'),
-            torrentEngineInstances: req.body.torrentEngineInstances !== undefined ? parseInt(req.body.torrentEngineInstances, 10) : (s.torrentEngineInstances || 1),
+            torrentEngine: req.body.torrentEngine !== undefined ? req.body.torrentEngine : (s.torrentEngine || 'torrent-stream'),
+            torrentEngineInstances: req.body.torrentEngineInstances !== undefined ? parseInt(req.body.torrentEngineInstances, 10) : (s.torrentEngineInstances || 3),
             streamingMode: req.body.streamingMode !== undefined ? !!req.body.streamingMode : (s.streamingMode !== false), // Default to true
         };
         const ok = writeSettings(next);
@@ -7277,7 +7286,9 @@ for (let i = 0; i < 10; i++) {
                                     if (message.data && message.data.hasVideo && !subtitlesFetched) {
                                         console.log('[PlayTorrioPlayer] Video loaded! Now fetching subtitles...');
                                         subtitlesFetched = true;
-                                        fetchAndAddSubtitles();
+                                        fetchAndAddSubtitles().catch(err => {
+                                            console.error('[PlayTorrioPlayer] Subtitle fetch failed:', err);
+                                        });
                                     }
                                     
                                 } else if (message.event === 'error' || message.event === 'playback_error') {
@@ -7454,21 +7465,39 @@ for (let i = 0; i < 10; i++) {
                     
                     console.log(`[PlayTorrioPlayer] Total subtitles fetched: ${subtitles.length}`);
                     
-                    // Add all subtitles to player using IPC
-                    for (const sub of subtitles) {
+                    // Add all subtitles to player using IPC with delay between each
+                    let successCount = 0;
+                    let failCount = 0;
+                    
+                    for (let i = 0; i < subtitles.length; i++) {
+                        const sub = subtitles[i];
                         try {
+                            console.log(`[PlayTorrioPlayer] Adding subtitle ${i + 1}/${subtitles.length}: ${sub.name}`);
                             const result = await sendCommand('add_external_subtitle', {
                                 name: sub.name,
                                 url: sub.url,
                                 comment: sub.comment
                             });
-                            console.log(`[PlayTorrioPlayer] Added subtitle: ${sub.name} (${sub.comment}) at index ${result.index}`);
+                            console.log(`[PlayTorrioPlayer] ✓ Added subtitle: ${sub.name} (${sub.comment}) at index ${result.index}`);
+                            successCount++;
+                            
+                            // Add small delay between subtitle additions to avoid overwhelming the player
+                            if (i < subtitles.length - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                            }
                         } catch (e) {
-                            console.error(`[PlayTorrioPlayer] Failed to add subtitle ${sub.name}:`, e);
+                            console.error(`[PlayTorrioPlayer] ✗ Failed to add subtitle ${sub.name}:`, e.message);
+                            failCount++;
+                            
+                            // If we get 3 consecutive failures, stop trying
+                            if (failCount >= 3) {
+                                console.warn(`[PlayTorrioPlayer] Too many subtitle failures (${failCount}), stopping subtitle additions`);
+                                break;
+                            }
                         }
                     }
                     
-                    console.log('[PlayTorrioPlayer] All subtitles added successfully');
+                    console.log(`[PlayTorrioPlayer] Subtitle addition complete: ${successCount} succeeded, ${failCount} failed`);
                 } catch (e) {
                     console.error('[PlayTorrioPlayer] Error fetching/adding subtitles:', e);
                 }

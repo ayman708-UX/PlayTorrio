@@ -113,6 +113,7 @@ let currentTrailerKey = null;
 // Play Loading Overlay functions
 const playLoadingOverlay = document.getElementById('play-loading-overlay');
 const playLoadingText = document.getElementById('play-loading-text');
+let currentAbortController = null;
 
 function showPlayLoading(text = 'Preparing stream...') {
     if (playLoadingOverlay) {
@@ -125,7 +126,24 @@ function hidePlayLoading() {
     if (playLoadingOverlay) {
         playLoadingOverlay.classList.add('hidden');
     }
+    // Cancel any ongoing requests
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+    }
 }
+
+// Setup cancel button
+document.addEventListener('DOMContentLoaded', () => {
+    const cancelBtn = document.getElementById('cancel-loading-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            console.log('[PlayLoading] User cancelled');
+            hidePlayLoading();
+        });
+    }
+});
+
 
 // Fetch subtitles for PlayTorrioPlayer with 5 second timeout
 async function fetchSubtitlesForPlayer(tmdbId, imdbId, seasonNum, episodeNum, mediaType) {
@@ -288,8 +306,8 @@ async function openPlayerInIframe(options) {
         const settingsRes = await fetch('/api/settings');
         const settings = await settingsRes.json();
         
-        // Determine player type (default to playtorrio)
-        const playerType = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'playtorrio');
+        // Determine player type (default to builtin/HTML5)
+        const playerType = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'builtin');
         
         if (playerType === 'nodempv') {
             // Use NodeMPV player via Electron IPC
@@ -2393,7 +2411,12 @@ const displaySources = (sources) => {
                     const apiEndpoint = isAltEngine ? '/api/alt-torrent-files' : '/api/torrent-files';
                     console.log(`[TorrentEngine] Using ${engineConfig.engine} engine via ${apiEndpoint}`);
                     
-                    const res = await fetch(`${apiEndpoint}?magnet=${encodeURIComponent(activeLink)}`);
+                    // Create abort controller for this request
+                    currentAbortController = new AbortController();
+                    
+                    const res = await fetch(`${apiEndpoint}?magnet=${encodeURIComponent(activeLink)}`, {
+                        signal: currentAbortController.signal
+                    });
                     
                     if (!res.ok) {
                         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -2462,7 +2485,10 @@ const displaySources = (sources) => {
                 } catch (err) {
                     console.error('[TorrentEngine] Error fetching torrent info:', err);
                     hidePlayLoading();
-                    alert('Error fetching torrent: ' + err.message);
+                    // Don't show alert if user cancelled
+                    if (err.name !== 'AbortError') {
+                        alert('Error fetching torrent: ' + err.message);
+                    }
                 }
             }
         } catch (err) {

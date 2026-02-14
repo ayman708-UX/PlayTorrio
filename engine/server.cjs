@@ -10811,7 +10811,7 @@
         self.transcodeConcurrency = isPositiveInteger(self.transcodeConcurrency) ? self.transcodeConcurrency : 1, 
         self.transcodeTrackConcurrency = isPositiveInteger(self.transcodeTrackConcurrency) ? self.transcodeTrackConcurrency : 1, 
         self.transcodeHardwareAccel = !self.hasOwnProperty("transcodeHardwareAccel") || self.transcodeHardwareAccel, 
-        self.transcodeProfile = self.hasOwnProperty("transcodeProfile") ? self.transcodeProfile : "ultrafast", 
+        self.transcodeProfile = self.hasOwnProperty("transcodeProfile") ? self.transcodeProfile : null, 
         self.allTranscodeProfiles = [], self.transcodeMaxWidth = self.hasOwnProperty("transcodeMaxWidth") ? self.transcodeMaxWidth : 1920, 
         self.load(), self;
     })(appPath);
@@ -18271,7 +18271,7 @@
                     vp9: "vp9_qsv",
                     mpeg2video: "mpeg2_qsv"
                 },
-                preset: "ultrafast",
+                preset: "veryfast",
                 pixelFormat: "nv12",
                 scalePrefix: "hwmap=derive_device=qsv,",
                 scale: "scale_qsv",
@@ -18296,7 +18296,7 @@
                     vp9: "vp9_qsv",
                     mpeg2video: "mpeg2_qsv"
                 },
-                preset: "ultrafast",
+                preset: "veryfast",
                 pixelFormat: "nv12",
                 scale: "scale_vaapi",
                 scaleExtra: ":mode=fast",
@@ -43876,7 +43876,7 @@
         })), enginefs.router.use("/proxy", proxy.getRouter());
         var app = enginefs.app(), server = (http = __webpack_require__(11), enginefs._server = http.createServer(app)), port = 6988;
         server.listen(port), server.on("error", (function(err) {
-            port++ < 11474 ? (console.warn(err), server.listen(port)) : console.error(err);
+            port++ < 6994 ? (console.warn(err), server.listen(port)) : console.error(err);
         })), http.globalAgent.maxSockets = 40, server.on("listening", (function() {
             enginefs.baseUrlLocal = "http://127.0.0.1:" + server.address().port, enginefs.baseUrl = "http://" + ip.address() + ":" + server.address().port, 
             localAddon.setEngineUrl(enginefs.baseUrlLocal), console.log("EngineFS server started at " + enginefs.baseUrlLocal), 
@@ -43886,8 +43886,8 @@
             apiEndpoint: apiCertifficateEndpoint
         });
         var sserver = https.createServer(app);
-        if (sserver.listen(12470), sserver.on("listening", (function() {
-            console.log("EngineFS HTTPS endpoint at https://local.strem.io:12470");
+        if (sserver.listen(6989), sserver.on("listening", (function() {
+            console.log("EngineFS HTTPS endpoint at https://local.strem.io:6989");
         })), sserver.on("error", (function(err) {
             console.warn(err);
         })), argv.open || process.env.OPEN) {
@@ -60137,7 +60137,7 @@
         },
         video: {
             transmuxing: [ "-c:v", "copy" ],
-            notTransmuxing: [ "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast", "-tune", "zerolatency" ],
+            notTransmuxing: [ "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-tune", "zerolatency" ],
             getFilter: function(instance) {
                 var video_stream = instance.streams.find((function(stream) {
                     return "video" == stream.codec_type;

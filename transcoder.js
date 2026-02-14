@@ -34,8 +34,11 @@ const CONFIG = {
   PREWARM_SECONDS: 8,             // Pre-transcode this many seconds
   PREWARM_ON_METADATA: true,      // Start transcoding when metadata requested
   SEEK_REUSE_THRESHOLD: 30,       // Reuse stream if seeking within this many seconds forward
-  PARALLEL_THREADS: Math.max(2, os.cpus().length - 2),
+  PARALLEL_THREADS: Math.max(2, Math.min(4, os.cpus().length - 2)), // Limit to max 4 threads
   TEMP_DIR: path.join(os.tmpdir(), 'ultra-transcoder'),
+  MAX_CPU_THREADS: 4,             // Limit FFmpeg CPU threads to reduce load
+  BUFFER_SIZE: '512k',            // Smaller buffer to reduce memory usage
+  MAX_BITRATE: '4M',              // Cap bitrate to reduce CPU load
 };
 
 // Ensure temp directory exists
@@ -134,7 +137,7 @@ async function benchmarkEncoder(encoderName) {
 }
 
 // ============================================================================
-// METADATA PROBING (with pre-warming)
+// METADATA PROBING (with pre-warming and retry logic)
 // ============================================================================
 
 export async function getMetadata(streamUrl) {
@@ -142,7 +145,7 @@ export async function getMetadata(streamUrl) {
     return metadataCache.get(streamUrl);
   }
   
-  const metadata = await probeStream(streamUrl);
+  const metadata = await probeStreamWithRetry(streamUrl);
   metadataCache.set(streamUrl, metadata);
   
   // INNOVATION: Start pre-warming while user is looking at metadata
@@ -153,19 +156,59 @@ export async function getMetadata(streamUrl) {
   return metadata;
 }
 
-function probeStream(streamUrl) {
+async function probeStreamWithRetry(streamUrl, maxRetries = 3) {
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[UltraTranscoder] Probing stream (attempt ${attempt}/${maxRetries})...`);
+      const metadata = await probeStream(streamUrl, attempt);
+      
+      // Check if we got a valid duration (not just a few seconds)
+      if (metadata.duration > 10) {
+        console.log(`[UltraTranscoder] Valid duration detected: ${metadata.duration.toFixed(1)}s`);
+        return metadata;
+      } else if (metadata.duration > 0 && metadata.duration <= 10) {
+        console.warn(`[UltraTranscoder] Duration too short (${metadata.duration}s), retrying with longer probe...`);
+        lastError = new Error(`Duration too short: ${metadata.duration}s`);
+        // Continue to retry with longer probe times
+      } else {
+        console.warn(`[UltraTranscoder] No duration detected, retrying...`);
+        lastError = new Error('No duration detected');
+      }
+    } catch (e) {
+      console.error(`[UltraTranscoder] Probe attempt ${attempt} failed:`, e.message);
+      lastError = e;
+    }
+    
+    // Wait before retrying (exponential backoff)
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  // If all retries failed, throw error
+  throw new Error(`Failed to probe stream after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+}
+
+function probeStream(streamUrl, attempt = 1) {
   return new Promise((resolve, reject) => {
     const targetUrl = streamUrl.replace('localhost', '127.0.0.1');
+    
+    // Increase probe size and duration with each attempt
+    const probeSize = Math.min(5000000 * attempt, 20000000); // 5MB, 10MB, 15MB, 20MB
+    const analyzeDuration = Math.min(5000000 * attempt, 20000000); // 5s, 10s, 15s, 20s
     
     const args = [
       '-v', 'error',
       '-print_format', 'json',
       '-show_format',
       '-show_streams',
-      '-analyzeduration', '2000000',
-      '-probesize', '2000000',
+      '-analyzeduration', analyzeDuration.toString(),
+      '-probesize', probeSize.toString(),
       '-fflags', '+fastseek+nobuffer',
-      '-timeout', '8000000',
+      '-timeout', '15000000', // 15 second timeout
       targetUrl
     ];
 
@@ -175,7 +218,7 @@ function probeStream(streamUrl) {
     const timeout = setTimeout(() => {
       ffprobe.kill('SIGKILL');
       reject(new Error('Probe timeout'));
-    }, 10000);
+    }, 20000); // 20 second timeout
 
     ffprobe.stdout.on('data', (data) => output += data);
     ffprobe.on('close', (code) => {
@@ -273,13 +316,22 @@ export async function handleTranscodeStream(req, res) {
     }
   }
 
-  // Get or probe metadata
+  // Get or probe metadata with retry logic
   let metadata = metadataCache.get(streamUrl);
   if (!metadata) {
     try {
-      metadata = await probeStream(streamUrl);
+      metadata = await probeStreamWithRetry(streamUrl);
       metadataCache.set(streamUrl, metadata);
-    } catch {}
+    } catch (e) {
+      console.error('[UltraTranscoder] Failed to probe stream:', e.message);
+      return res.status(500).send(`Failed to probe stream: ${e.message}`);
+    }
+  }
+  
+  // Validate that we have a proper duration before starting playback
+  if (!metadata.duration || metadata.duration <= 10) {
+    console.error('[UltraTranscoder] Invalid duration detected:', metadata.duration);
+    return res.status(500).send(`Invalid stream duration: ${metadata.duration || 0}s. Stream may not be ready yet.`);
   }
 
   const needsTranscode = metadata ? checkNeedsTranscode(metadata) : true;
@@ -322,7 +374,29 @@ function startLiveTranscode(req, res, streamUrl, startTime, metadata, needsTrans
     forceSoftware: retryCount > 0,
   });
 
-  const ffmpeg = spawn(FFMPEG, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  // Spawn with lower priority to reduce CPU impact
+  const spawnOptions = { 
+    stdio: ['ignore', 'pipe', 'pipe']
+  };
+  
+  // Set lower process priority on Windows/Linux
+  if (process.platform === 'win32') {
+    spawnOptions.windowsVerbatimArguments = false;
+    spawnOptions.detached = false;
+  }
+  
+  const ffmpeg = spawn(FFMPEG, args, spawnOptions);
+  
+  // Set process priority after spawn (lower priority = less CPU impact)
+  try {
+    if (process.platform !== 'win32') {
+      // On Unix-like systems, use renice (nice value 10 = lower priority)
+      spawn('renice', ['-n', '10', '-p', ffmpeg.pid.toString()], { stdio: 'ignore' });
+    }
+  } catch (e) {
+    // Ignore if renice fails
+  }
+  
   let hasOutput = false;
   
   activeStreams.set(streamKey, {
@@ -453,22 +527,26 @@ function buildFFmpegArgs(inputUrl, startTime, needsTranscode, metadata, options 
     const useEncoder = options.forceSoftware ? 'libx264' : encoder;
     args.push('-c:v', useEncoder);
     
-    // Encoder-specific optimizations
+    // Encoder-specific optimizations (CPU/memory friendly)
     if (useEncoder === 'h264_nvenc') {
       args.push(
-        '-preset', 'p4',
+        '-preset', 'p2',            // Faster preset (was p4)
         '-tune', 'ull',
         '-rc', 'vbr',
-        '-cq', '23',
+        '-cq', '25',                // Higher CQ for less processing
         '-bf', '0',
         '-g', '60',
+        '-maxrate', CONFIG.MAX_BITRATE,
+        '-bufsize', CONFIG.BUFFER_SIZE,
       );
     } else if (useEncoder === 'h264_qsv') {
       args.push(
-        '-preset', 'faster',
-        '-global_quality', '23',
+        '-preset', 'veryfast',      // Faster preset
+        '-global_quality', '25',    // Higher quality value = less processing
         '-bf', '0',
         '-g', '60',
+        '-maxrate', CONFIG.MAX_BITRATE,
+        '-bufsize', CONFIG.BUFFER_SIZE,
       );
     } else if (useEncoder === 'h264_amf') {
       args.push(
@@ -476,34 +554,40 @@ function buildFFmpegArgs(inputUrl, startTime, needsTranscode, metadata, options 
         '-rc', 'vbr_latency',
         '-bf', '0',
         '-g', '60',
+        '-maxrate', CONFIG.MAX_BITRATE,
+        '-bufsize', CONFIG.BUFFER_SIZE,
       );
     } else if (useEncoder === 'h264_videotoolbox') {
       args.push(
         '-realtime', '1',
         '-bf', '0',
         '-g', '60',
+        '-maxrate', CONFIG.MAX_BITRATE,
+        '-bufsize', CONFIG.BUFFER_SIZE,
       );
     } else {
-      // libx264 - RELIABLE
+      // libx264 - RELIABLE with CPU/memory optimizations
       args.push(
-        '-preset', 'ultrafast',
+        '-preset', 'veryfast',      // Changed from ultrafast for better compression
         '-tune', 'zerolatency',
-        '-crf', '23',
-        '-profile:v', 'high',
-        '-level', '4.1',
+        '-crf', '25',               // Slightly higher CRF for less CPU usage
+        '-profile:v', 'main',       // Changed from high to reduce complexity
+        '-level', '4.0',            // Reduced from 4.1
         '-bf', '0',
         '-g', '60',
-        '-threads', '0',
+        '-threads', CONFIG.MAX_CPU_THREADS.toString(), // Limit threads
+        '-maxrate', CONFIG.MAX_BITRATE, // Cap bitrate
+        '-bufsize', CONFIG.BUFFER_SIZE, // Smaller buffer
       );
     }
 
     // Pixel format
     args.push('-pix_fmt', 'yuv420p');
 
-    // Audio encoding
+    // Audio encoding - optimized for lower CPU
     args.push(
       '-c:a', 'aac',
-      '-b:a', '192k',
+      '-b:a', '128k',              // Reduced from 192k
       '-ac', '2',
       '-ar', '48000',
     );
@@ -550,4 +634,4 @@ process.on('SIGINT', () => {
 });
 
 // Export for server.mjs
-export { probeStream, activeStreams, metadataCache };
+export { probeStream, probeStreamWithRetry, activeStreams, metadataCache };

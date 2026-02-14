@@ -787,11 +787,11 @@ async function playJellyfinItem(item) {
     }
     
     // Get player preference from API settings (same as details page)
-    let playerPreference = 'playtorrio'; // Default
+    let playerPreference = 'builtin'; // Default
     try {
         const settingsRes = await fetch('/api/settings');
         const settings = await settingsRes.json();
-        playerPreference = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'playtorrio');
+        playerPreference = settings.playerType || (settings.useNodeMPV ? 'nodempv' : 'builtin');
         console.log('[Jellyfin] Player preference from API:', playerPreference);
     } catch (e) {
         console.error('[Jellyfin] Failed to load player preference:', e);

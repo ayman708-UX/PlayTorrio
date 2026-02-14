@@ -59,7 +59,10 @@
     <!-- Play Loading Overlay (fullscreen black when starting playback) -->
     <div id="play-loading-overlay" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black hidden">
         <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-        <p id="play-loading-text" class="text-white/70 text-lg">Preparing stream...</p>
+        <p id="play-loading-text" class="text-white/70 text-lg mb-6">Preparing stream...</p>
+        <button id="cancel-loading-btn" class="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors">
+            Cancel
+        </button>
     </div>
 
     <!-- Backdrop -->
